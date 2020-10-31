@@ -37,7 +37,7 @@ protected:
 // this is a pretty intense algorithm
 // so solid and numerous test cases are necessary
 void select_connected_blocks
-    (const Grid<int> &, std::vector<VectorI> & selected, Grid<bool> & explored);
+    (const ConstSubGrid<int> &, std::vector<VectorI> & selected, Grid<bool> & explored);
 
 std::vector<VectorI> select_connected_blocks(const Grid<int> &, VectorI);
 

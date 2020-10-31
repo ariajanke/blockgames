@@ -117,7 +117,7 @@ std::vector<VectorI> select_connected_blocks(const Grid<int> & grid, VectorI r) 
 }
 
 void select_connected_blocks
-    (const Grid<int> & grid,
+    (const ConstSubGrid<int> & grid,
      std::vector<VectorI> & selected, Grid<bool> & explored)
 {
     assert(selected.size() == 1);

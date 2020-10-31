@@ -40,8 +40,6 @@ private:
 
     void handle_response(const Response &);
 
-    sf::Texture m_texture;
-    sf::Texture m_bg_texture;
     Grid<int> m_blocks;
     Rng m_rng = Rng { std::random_device()() };
     FallEffectsFull m_fef;

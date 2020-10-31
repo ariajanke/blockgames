@@ -18,13 +18,15 @@ const uint8_t * get_icon_image();
 
 const sf::Texture & load_builtin_block_texture();
 
-const sf::Texture & load_builtin_background_texture();
+// ----------------------------------------------------------------------------
 
 // helpers to render tiles
 
 sf::IntRect texture_rect_for(int, TileEdges);
 
 sf::IntRect texture_rect_for(int);
+
+sf::IntRect texture_rect_for_background();
 
 sf::Color base_color_for_block(int);
 

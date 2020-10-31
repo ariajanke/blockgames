@@ -17,11 +17,7 @@ void all_blocks_in_column_fall_out(Grid<int> &, FallBlockEffects &, int col);
 void ScenarioPriv::DefDeleter::operator () (Scenario * ptr) const { delete ptr; }
 
 void PuyoState::setup_board(const Settings & settings) {
-
-    m_texture = load_builtin_block_texture();
-    m_bg_texture = load_builtin_background_texture();
-
-    m_pef.assign_texture(m_texture);
+    m_pef.assign_texture(load_builtin_block_texture());
 
     m_current_scenario = Scenario::make_glass_waves();
     m_current_scenario->assign_board(m_blocks);
@@ -42,7 +38,7 @@ void PuyoState::setup_board(const Settings & settings) {
     }
     }
     m_blocks.set_size(p.board_width, p.board_height);
-    m_fef.setup(p.board_width, p.board_height, m_texture);
+    m_fef.setup(p.board_width, p.board_height, load_builtin_block_texture());
     set_max_colors(p.max_colors);
     handle_response(m_current_scenario->on_turn_change());
     handle_response(m_current_scenario->on_turn_change());
@@ -166,7 +162,8 @@ void PuyoState::process_event(const sf::Event & event) {
 {
     {
     sf::Sprite brush;
-    brush.setTexture(m_bg_texture);
+    brush.setTexture(load_builtin_block_texture());
+    brush.setTextureRect(texture_rect_for_background());
     for (VectorI r; r != m_blocks.end_position(); r = m_blocks.next(r)) {
         brush.setPosition(float(k_block_size*r.x),
                           float(k_block_size*r.y));
