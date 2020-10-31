@@ -1,0 +1,6 @@
+[submodule "lib/cul"]
+	path = lib/cul
+	url = https://github.com/ariajanke/util-common.git
+[submodule "lib/ksg"]
+	path = lib/ksg
+	url = https://github.com/ariajanke/ksg.git

@@ -1,0 +1,3 @@
+font.ttf is originally named "FreeUniversal-Regular.ttf"
+This file is available for free download from: https://fontlibrary.org/en/font/freeuniversal, and was created by a person whose handle is "narrowhouse".
+It is released under the OFL making it legal for redistribution.
