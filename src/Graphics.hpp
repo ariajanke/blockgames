@@ -2,11 +2,9 @@
 
 #include "Defs.hpp"
 
-#include "SubGrid.hpp"
+#include <common/SubGrid.hpp>
 
-namespace sf {
-    class RenderTarget;
-}
+namespace sf { class RenderTarget; }
 
 sf::Image to_image(const Grid<sf::Color> &);
 

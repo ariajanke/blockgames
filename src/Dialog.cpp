@@ -4,6 +4,7 @@
 #include "BoardStates.hpp"
 #include "PuyoState.hpp"
 #include "PuyoDialogs.hpp"
+#include "TetrisDialogs.hpp"
 
 #include <ksg/TextArea.hpp>
 #include <ksg/TextButton.hpp>
@@ -11,6 +12,8 @@
 #include <cassert>
 
 namespace {
+
+using BoardOptions = BoardConfigDialog::BoardOptions;
 
 class FrameStretcher final : public ksg::Widget {
     static constexpr const float k_min_width = 600.f;
@@ -114,15 +117,101 @@ void Dialog::set_styles_ptr(StyleMapPtr sptr)
 /* static */ DialogPtr Dialog::make_top_level_dialog()
     { return make_dialog<GameSelectionDialog>(); }
 
+// ----------------------------------------------------------------------------
+
+void BoardConfigDialog::setup() {
+
+    m_board_config_notice.set_string(U"Configure board width, height,\nand maximum number of colors.");
+
+    m_width_label.set_string(U"Width");
+    m_height_label.set_string(U"Height");
+    m_num_of_colors_label.set_string(U"Max Colors");
+
+    for (auto * slider : { &m_width_sel, &m_height_sel, &m_number_of_colors_sel }) {
+        slider->set_size(150.f, 40.f);
+    }
+
+    m_width_sel.set_options(number_range_to_strings(k_min_board_size, k_max_board_size));
+    m_height_sel.set_options(number_range_to_strings(k_min_board_size, k_max_board_size));
+    m_number_of_colors_sel.set_options(number_range_to_strings(k_min_colors, k_max_colors));
+
+    m_width_sel.select_option(std::size_t(board_options().width - k_min_board_size));
+    m_width_sel.set_option_change_event([this]() {
+        board_options().width = k_min_board_size + int(m_width_sel.selected_option_index());
+    });
+    m_height_sel.select_option(std::size_t(board_options().height - k_min_board_size));
+    m_height_sel.set_option_change_event([this]() {
+        board_options().height = k_min_board_size + int(m_height_sel.selected_option_index());
+    });
+    m_number_of_colors_sel.select_option(std::size_t(board_options().colors - k_min_colors));
+    m_number_of_colors_sel.set_option_change_event([this]() {
+        board_options().colors = k_min_colors + int(m_number_of_colors_sel.selected_option_index());
+    });
+
+    begin_adding_widgets().
+        add(m_board_config_notice).add_line_seperator().
+        add(m_width_label).add_horizontal_spacer().add(m_width_sel).add_line_seperator().
+        add(m_height_label).add_horizontal_spacer().add(m_height_sel).add_line_seperator().
+        add(m_num_of_colors_label).add_horizontal_spacer().add(m_number_of_colors_sel).add_line_seperator();
+}
+
+void BoardConfigDialog::assign_board_options(BoardOptions & opts)
+    { m_board_options = &opts; }
+
+/* private */ BoardOptions & BoardConfigDialog::board_options() {
+    assert(m_board_options);
+    return *m_board_options;
+}
+
+// ----------------------------------------------------------------------------
+
+/* private */ void SameGameDialog::setup_() {
+    m_about_single_block_popping.set_string(
+        U"Enabling single block popping will cause the game to not\n"
+         "end when only single blocks remain. The downside is that\n"
+         "this comes with a score penalty");
+    m_single_block_pop_notice.set_string(U"Enable/Disable single block popping:");
+    update_button_string();
+    m_back.set_string(U"Back to Menu");
+
+    m_single_block_pop.set_press_event([this]() {
+        auto & b = settings().samegame.gameover_on_singles;
+        b = !b;
+        update_button_string();
+    });
+
+    m_board_config.assign_board_options(settings().samegame);
+    m_board_config.setup();
+
+    m_back.set_press_event([this]() {
+        set_next_state(Dialog::make_top_level_dialog());
+    });
+
+    begin_adding_widgets(get_styles()).
+        add(m_about_single_block_popping).add_line_seperator().
+        add(m_single_block_pop_notice).add_horizontal_spacer().add(m_single_block_pop).add_horizontal_spacer().add_line_seperator().
+        add(m_board_config).add_line_seperator().
+        add(m_back);
+}
+
+/* private */ void SameGameDialog::update_button_string() {
+    m_single_block_pop.set_string(settings().samegame.gameover_on_singles ? U"Disabled" : U"Enabled");
+}
+
+std::vector<UString> number_range_to_strings(int min, int max) {
+    assert(min <= max);
+    std::vector<UString> rv;
+    for (int i = min; i != max + 1; ++i) {
+        rv.push_back(to_ustring(std::to_string(i)));
+    }
+    return rv;
+}
+
 namespace {
 
 void GameSelectionDialog::setup_() {
-#   if 0
-    auto styles_ = ksg::styles::construct_system_styles();
-    styles_[ksg::styles::k_global_font] = ksg::styles::load_font("font.ttf");
-#   endif
-
-    m_sel_notice.set_text(U"Select a game to play.");
+    using Game = GameSelection;
+    m_sel_notice.set_string(U"Select a game to play.");
 
     m_freeplay.set_string(U"Free Play");
     m_scenario.set_string(U"Scenarios");
@@ -133,12 +222,11 @@ void GameSelectionDialog::setup_() {
     for (auto game : k_game_list) {
         gamenames.push_back(to_ustring(game_name(game)));
     }
-    m_game_slider.swap_options(gamenames);
+    m_game_slider.set_options(std::move(gamenames));
     }
 
     m_freeplay.set_press_event([this]() {
         set_next_state([this]() -> std::unique_ptr<AppState> {
-            using Game = GameSelection;
             switch (to_game_selection(m_game_slider.selected_option_index())) {
             case Game::puyo_clone    : return std::make_unique<PuyoState >();
             case Game::samegame_clone: return std::make_unique<SameGame   >();
@@ -148,15 +236,13 @@ void GameSelectionDialog::setup_() {
         }());
     });
 
-    m_settings.set_press_event([this]() {
-        auto game = to_game_selection(m_game_slider.selected_option_index());
-        if (game == GameSelection::puyo_clone) {
-            set_next_state(make_dialog<PuyoDialog>());
-            return;
+    m_settings.set_press_event([this]() {        
+        switch (to_game_selection(m_game_slider.selected_option_index())) {
+        case Game::puyo_clone  : set_next_state(make_dialog<PuyoDialog>()); break;
+        case Game::tetris_clone: set_next_state(make_dialog<PolyominoSelectDialog>()); break;
+        case Game::samegame_clone: set_next_state(make_dialog<SameGameDialog>()); break;
+        default: break;
         }
-#       if 0
-        set_next_state(make_dialog<BoardConfigDialog>(game));
-#       endif
     });
 
     m_exit.set_press_event([this]()

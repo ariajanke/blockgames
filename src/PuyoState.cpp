@@ -12,6 +12,9 @@ void all_blocks_fall_out(Grid<int> &, FallBlockEffects &);
 #if 0
 void all_blocks_in_column_fall_out(Grid<int> &, FallBlockEffects &, int col);
 #endif
+
+VectorI get_spawn_point(const Grid<int> &);
+
 } // end of <anonymous> namespace
 
 void ScenarioPriv::DefDeleter::operator () (Scenario * ptr) const { delete ptr; }
@@ -37,6 +40,7 @@ void PuyoState::setup_board(const Settings & settings) {
         p.max_colors = conf.colors;
     }
     m_pop_requirement = settings.puyo.pop_requirement;
+    m_fall_delay = settings.puyo.fall_speed;
     }
     m_blocks.set_size(p.board_width, p.board_height);
     m_fef.setup(p.board_width, p.board_height, load_builtin_block_texture());
@@ -53,12 +57,11 @@ void PuyoState::update(double et) {
 
 void PuyoState::update_piece(double et) {
     assert(is_block_color(m_piece.color()) && is_block_color(m_piece.other_color()));
-    if ((m_fall_time += et*m_fall_multi) <= k_fall_delay) return;
+    if ((m_fall_time += et*m_fall_multi) <= m_fall_delay) return;
 
     m_fall_time = 0.;
-    VectorI spawn_point(m_blocks.width() / 2 - 1, 0);
     if (!m_piece.descend(m_blocks)) {
-        if (m_blocks(spawn_point + VectorI(0, 1)) != k_empty_block) {
+        if (m_blocks(get_spawn_point(m_blocks)) != k_empty_block) {
             // on loss
             all_blocks_fall_out(m_blocks, m_fef);
             m_update_func = &PuyoState::update_fall_effects;
@@ -114,7 +117,7 @@ void PuyoState::handle_response(const Response & response) {
         m_piece = FallingPiece(m_next_piece.first, m_next_piece.second);
         m_next_piece = pair;
 
-        m_piece.set_location(VectorI(m_blocks.width() / 2 - 1, 0));
+        m_piece.set_location(get_spawn_point(m_blocks));
         m_update_func = &PuyoState::update_piece;
     } else if (auto * fallins = response.as_pointer<Grid<int>>()) {
         m_fef.do_fall_in(m_blocks, *fallins);
@@ -193,7 +196,7 @@ void PuyoState::process_event(const sf::Event & event) {
     }();
     int y_offset = 0;
     if (bottom_is_open) {
-        y_offset = int(std::round((m_fall_time / k_fall_delay)*double(k_block_size)));
+        y_offset = int(std::round((m_fall_time / m_fall_delay)*double(k_block_size)));
     }
 
     sf::Sprite brush;
@@ -250,4 +253,11 @@ void all_blocks_in_column_fall_out
     effects.finish();
 }
 #endif
+
+VectorI get_spawn_point(const Grid<int> & board) {
+    auto w = board.width();
+    auto x = (w / 2) - (w % 2 ? 0 : 1);
+    return VectorI(x, 0);
+}
+
 } // end of <anonymous> namespace

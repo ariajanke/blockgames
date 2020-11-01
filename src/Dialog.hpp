@@ -6,6 +6,9 @@
 #include "Settings.hpp"
 
 #include <ksg/Frame.hpp>
+#include <ksg/TextArea.hpp>
+#include <ksg/OptionsSlider.hpp>
+#include <ksg/TextButton.hpp>
 
 class Dialog : public ksg::Frame {
 public:
@@ -34,6 +37,45 @@ private:
     Settings * m_settings = nullptr;
     StyleMapPtr m_styles_ptr = nullptr;
 };
+
+// ----------------------------------------------------------------------------
+
+class BoardConfigDialog final : public ksg::Frame {
+public:
+    using BoardOptions = Settings::Board;
+
+    void setup();
+    void assign_board_options(BoardOptions &);
+
+private:
+    BoardOptions & board_options();
+    ksg::TextArea m_board_config_notice;
+
+    ksg::TextArea m_width_label;
+    ksg::TextArea m_height_label;
+    ksg::TextArea m_num_of_colors_label;
+
+    ksg::OptionsSlider m_width_sel;
+    ksg::OptionsSlider m_height_sel;
+    ksg::OptionsSlider m_number_of_colors_sel;
+
+    BoardOptions * m_board_options = nullptr;
+};
+
+class SameGameDialog final : public Dialog {
+    void setup_() override;
+    void update_button_string();
+
+    ksg::TextArea m_about_single_block_popping;
+    ksg::TextArea m_single_block_pop_notice;
+    ksg::TextButton m_single_block_pop;
+
+    ksg::TextButton m_back;
+
+    BoardConfigDialog m_board_config;
+};
+
+std::vector<UString> number_range_to_strings(int min, int max);
 
 template <typename T, typename ... Args>
 DialogPtr make_dialog(Args ... args) {

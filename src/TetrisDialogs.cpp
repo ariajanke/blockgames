@@ -57,6 +57,10 @@ void PolyominoButton::issue_auto_resize() {
 
 // ----------------------------------------------------------------------------
 
+PolyominoSetDialogPage::PolyominoSetDialogPage(BoardOptions & board_opts) {
+    m_board_config.assign_board_options(board_opts);
+}
+
 PolyominoItr PolyominoSetDialogPage::set
     (PolyominoItr cont_beg, PolyominoItr, PolyominoItr,
      EnabledPolyominoBits & enabledbits)
@@ -69,7 +73,7 @@ PolyominoItr PolyominoSetDialogPage::set
 void PolyominoSetDialogPage::update_selections() {
     std::size_t idx = 0;
     for (auto set : k_sets) {
-        m_set_notices[idx++].set_text(display_string_for_set(set));
+        m_set_notices[idx++].set_string(display_string_for_set(set));
     }
 }
 
@@ -79,6 +83,10 @@ void PolyominoSetDialogPage::update_selections() {
 
     std::size_t idx = 0;
     auto adder = begin_adding_widgets();
+    m_board_config.setup();
+    m_poly_set_nfo.set_string(U"Enable/Disable sets of polyominos at a time.");
+    adder.add(m_board_config).add_line_seperator().add(m_poly_set_nfo).add_line_seperator();
+
     for (auto set : k_sets) {
         m_set_endis_buttons[idx].set_string(UString(U"Toggle ") + to_ustring(to_string(set)) + U"s");
         m_set_endis_buttons[idx].set_press_event([this, set] () {
@@ -88,7 +96,7 @@ void PolyominoSetDialogPage::update_selections() {
                 m_enabled_polyominos->set(i, new_value);
             update_selections();
         });
-        m_set_notices[idx].set_text(display_string_for_set(set));
+        m_set_notices[idx].set_string(display_string_for_set(set));
         adder.add(m_set_endis_buttons[idx]).add(m_set_notices[idx]).add_line_seperator();
 
         ++idx;
@@ -184,7 +192,7 @@ PolyominoItr PolyominoSelectDialogPage::set
             auto idx_ = m_start_index + idx;
             auto new_val = !m_enabled_polyominos->test(idx_);
             m_enabled_polyominos->set(idx_, new_val);
-            m_poly_enabled_ta[idx].set_text(new_val ? k_on_string : k_off_string);
+            m_poly_enabled_ta[idx].set_string(new_val ? k_on_string : k_off_string);
             if (new_val) m_buttons[idx].set_on();
             else m_buttons[idx].set_off();
         });
@@ -209,10 +217,10 @@ void PolyominoSelectDialogPage::update_selections() {
     for (std::size_t i = 0; i != m_buttons.size(); ++i) {
         if (m_enabled_polyominos->test(i + m_start_index)) {
             m_buttons[i].set_on();
-            m_poly_enabled_ta[i].set_text(k_on_string);
+            m_poly_enabled_ta[i].set_string(k_on_string);
         } else {
             m_buttons[i].set_off();
-            m_poly_enabled_ta[i].set_text(k_off_string);
+            m_poly_enabled_ta[i].set_string(k_off_string);
         }
     }
     check_invarients();
@@ -226,7 +234,7 @@ void PolyominoSelectDialogPage::update_selections() {
 
 /* private */ void PolyominoSelectDialog::setup_() {
     const auto & all_p = Polyomino::all_polyminos();
-    m_pages.emplace_back(std::make_unique<PolyominoSetDialogPage>());
+    m_pages.emplace_back(std::make_unique<PolyominoSetDialogPage>(settings().tetris));
     for (auto itr = all_p.begin(); true;) {
         itr = m_pages.back()->set
                 (all_p.begin(), itr, all_p.end(), m_enabled_polyominos);
@@ -237,8 +245,6 @@ void PolyominoSelectDialogPage::update_selections() {
         page_ptr->set_size(500, 500);
     }
 
-    m_info_notice.set_text(U"Enable or disable various polyominos by\n"
-                            "clicking on one or sets of them.");
     m_back_to_menu.set_string(U"Back to menu");
     {
     std::vector<UString> opts;
@@ -255,14 +261,17 @@ void PolyominoSelectDialogPage::update_selections() {
 
     });
     m_back_to_menu.set_press_event([this]() {
-        set_next_state(std::make_unique<DialogState>());
+        set_next_state(Dialog::make_top_level_dialog());
     });
+#   if 0
+    m_board_config.assign_board_options(settings().tetris);
+    m_board_config.setup();
+#   endif
     flip_to_page(*m_pages.front());
 }
 
 /* private */ void PolyominoSelectDialog::flip_to_page(PolyominoDialogPage & page) {
     begin_adding_widgets(get_styles()).
-        add(m_info_notice).add_line_seperator().
         add(page).add_line_seperator().
         add(m_page_slider).add_line_seperator().
         add(m_back_to_menu);

@@ -1,6 +1,7 @@
 #include "Defs.hpp"
 #include "Graphics.hpp"
-#include "SubGrid.hpp"
+
+#include <common/SubGrid.hpp>
 
 #include <SFML/Graphics/RenderTarget.hpp>
 

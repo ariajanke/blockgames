@@ -17,11 +17,6 @@ public:
     // needed by Scenario
     using Response = MultiType<std::pair<int, int>, Grid<int>>;
 private:
-#   if 0
-    static constexpr const int k_pop_requirement = 4;
-#   endif
-    static constexpr const double k_fall_delay = 0.5;
-
     using UpdateFunc = void(PuyoState::*)(double);
 
     void setup_board(const Settings &) override;
@@ -48,6 +43,7 @@ private:
     PuyoPopEffects m_pef;
 
     double m_fall_time = 0.;
+    double m_fall_delay = 0.5;
     FallingPiece m_piece;
     std::pair<int, int> m_next_piece = std::make_pair(k_empty_block, k_empty_block);
     UpdateFunc m_update_func = &PuyoState::update_fall_effects;

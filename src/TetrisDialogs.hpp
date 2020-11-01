@@ -55,9 +55,14 @@ private:
 
 class PolyominoSetDialogPage final : public PolyominoDialogPage {
 public:
+    using BoardOptions = Settings::Board;
+
+    explicit PolyominoSetDialogPage(BoardOptions &);
+
     PolyominoItr set
         (PolyominoItr cont_beg, PolyominoItr, PolyominoItr,
          EnabledPolyominoBits & enabledbits) override;
+
     void update_selections() override;
 private:
     using PolyominoSet = Polyomino::PolyominoSet;
@@ -81,6 +86,9 @@ private:
 
     std::vector<ksg::TextArea  > m_set_notices;
     std::vector<ksg::TextButton> m_set_endis_buttons;
+
+    BoardConfigDialog m_board_config;
+    ksg::TextArea m_poly_set_nfo;
 };
 
 // ----------------------------------------------------------------------------
@@ -119,11 +127,9 @@ private:
 
     void flip_to_page(PolyominoDialogPage & page);
 
-    ksg::TextArea m_info_notice;
     ksg::TextButton m_back_to_menu;
     ksg::OptionsSlider m_page_slider;
 
     std::vector<PagePtr> m_pages;
-
     EnabledPolyominoBits m_enabled_polyominos;
 };

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Defs.hpp"
-#include "SubGrid.hpp"
+
+#include <common/SubGrid.hpp>
 
 class FallBlockEffects {
 public:

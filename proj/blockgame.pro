@@ -63,7 +63,6 @@ SOURCES += \
 
 HEADERS += \
     ../src/Graphics.hpp \
-    ../src/SubGrid.hpp \
     ../src/Defs.hpp \
     ../src/BlockAlgorithm.hpp \
     ../src/EffectsFull.hpp \
