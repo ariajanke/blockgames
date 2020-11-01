@@ -98,10 +98,16 @@ void PuyoDialog::setup_() {
     m_pop_req_notice.set_text(U"Pop Requirement");
     m_fall_speed_notice.set_text(U"Fall Speed");
 
-    auto opts = num_options_from_range(2, 12);
-    m_pop_req_slider.swap_options(opts);
+    static constexpr const int k_min_pop_req = 2;
+    static constexpr const int k_max_pop_req = 12;
+
+    m_pop_req_slider.set_options(num_options_from_range(k_min_pop_req, k_max_pop_req));
+    m_pop_req_slider.select_option(settings().puyo.pop_requirement - k_min_pop_req);
     // I should *not* have to set the slider's size
     m_pop_req_slider.set_size(120, 40);
+    m_pop_req_slider.set_option_change_event([this]() {
+        settings().puyo.pop_requirement = int(m_pop_req_slider.selected_option_index()) + k_min_pop_req;
+    });
 
     m_fall_speed_text.set_width(200.f);
 

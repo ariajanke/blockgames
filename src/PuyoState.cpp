@@ -36,6 +36,7 @@ void PuyoState::setup_board(const Settings & settings) {
     if (p.max_colors == k_use_freeplay) {
         p.max_colors = conf.colors;
     }
+    m_pop_requirement = settings.puyo.pop_requirement;
     }
     m_blocks.set_size(p.board_width, p.board_height);
     m_fef.setup(p.board_width, p.board_height, load_builtin_block_texture());
@@ -88,7 +89,7 @@ void PuyoState::update_pop_effects(double et) {
 void PuyoState::update_fall_effects(double et) {
     if (m_fef.has_effects()) {
         m_fef.update(et);
-    } else if (m_pef.do_pop(m_blocks, k_pop_requirement)) {
+    } else if (m_pef.do_pop(m_blocks,  m_pop_requirement)) {
         m_update_func = &PuyoState::update_pop_effects;
     } else {
         // after pop

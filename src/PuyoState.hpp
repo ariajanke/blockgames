@@ -17,7 +17,9 @@ public:
     // needed by Scenario
     using Response = MultiType<std::pair<int, int>, Grid<int>>;
 private:
+#   if 0
     static constexpr const int k_pop_requirement = 4;
+#   endif
     static constexpr const double k_fall_delay = 0.5;
 
     using UpdateFunc = void(PuyoState::*)(double);
@@ -51,6 +53,7 @@ private:
     UpdateFunc m_update_func = &PuyoState::update_fall_effects;
 
     double m_fall_multi = 1.;
+    int m_pop_requirement = 4;
     bool m_is_paused = false;
 
     ScenarioPtr m_current_scenario;
