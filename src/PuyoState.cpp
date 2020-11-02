@@ -164,16 +164,7 @@ void PuyoState::process_event(const sf::Event & event) {
 /* private */ void PuyoState::draw
     (sf::RenderTarget & target, sf::RenderStates) const
 {
-    {
-    sf::Sprite brush;
-    brush.setTexture(load_builtin_block_texture());
-    brush.setTextureRect(texture_rect_for_background());
-    for (VectorI r; r != m_blocks.end_position(); r = m_blocks.next(r)) {
-        brush.setPosition(float(k_block_size*r.x),
-                          float(k_block_size*r.y));
-        target.draw(brush);
-    }
-    }
+    draw_fill_with_background(target, m_blocks.width(), m_blocks.height());
 
     if (m_pef.has_effects()) {
         target.draw(m_pef);

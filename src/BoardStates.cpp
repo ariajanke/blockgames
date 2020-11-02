@@ -38,11 +38,39 @@ using InvArg       = std::invalid_argument;
     m_max_colors = n;
 }
 
+/* protected static */ void BoardState::draw_fill_with_background
+    (sf::RenderTarget & target,
+     int board_width, int board_height, VectorI offset)
+{
+    sf::Sprite brush;
+    brush.setTexture(load_builtin_block_texture());
+    brush.setTextureRect(texture_rect_for_background());
+    for (int y = 0; y != board_height; ++y) {
+    for (int x = 0; x != board_width ; ++x) {
+        brush.setPosition(sf::Vector2f(VectorI(x, y)*k_block_size + offset));
+        target.draw(brush);
+    }}
+}
+
 // ----------------------------------------------------------------------------
 
 /* private */ void TetrisState::setup_board(const Settings & settings) {
     const auto & conf = settings.tetris;
     m_blocks.set_size(conf.width, conf.height);
+
+    const auto & all_p = Polyomino::all_polyminos();
+    assert(m_available_polyominos.empty());
+    m_available_polyominos.reserve(all_p.size());
+    assert(all_p.size() == PolyominoEnabledSet().size());
+    for (std::size_t i = 0; i != all_p.size(); ++i) {
+        if (conf.enabled_polyominos.test(i)) {
+            m_available_polyominos.push_back(all_p[i]);
+        }
+    }
+    // force dominos if the set is empty
+    if (m_available_polyominos.empty()) {
+        m_available_polyominos.push_back(all_p[0]);
+    }
 
     reset_piece();
     m_fef.setup(conf.width, conf.height, load_builtin_block_texture());
@@ -92,6 +120,7 @@ using InvArg       = std::invalid_argument;
 }
 
 /* private */ void TetrisState::draw(sf::RenderTarget & target, sf::RenderStates) const {
+    draw_fill_with_background(target, m_blocks.width(), m_blocks.height());
     if (m_fef.has_effects()) {
         target.draw(m_fef);
     } else {
@@ -104,15 +133,17 @@ using InvArg       = std::invalid_argument;
             brush.setColor(base_color_for_block(m_piece.block_color(i)));
             target.draw(brush);
         }
+        brush.setPosition(0.f, 0.f);
         render_blocks(m_blocks, brush, target);
     }
 }
 
 /* private */ void TetrisState::reset_piece() {
-    const auto & tetras = Polyomino::default_tetrominos();
-    const auto & piece  = tetras[IntDistri(0, tetras.size() - 1)(m_rng)];
+    assert(!m_available_polyominos.empty());
+    const auto & polys = m_available_polyominos;
+    const auto & piece = polys[IntDistri(0, polys.size() - 1)(m_rng)];
     m_piece = piece;
-    m_piece.set_colors( 1 + ( (&piece - &tetras.front()) % k_max_colors ) );
+    m_piece.set_colors( 1 + ( (&piece - &polys.front()) % k_max_colors ) );
     m_piece.set_location(m_blocks.width() / 2, 0);
 }
 
@@ -126,26 +157,30 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
 
 /* private */ void SameGame::setup_board(const Settings & settings) {
     const auto & conf = settings.samegame;
-    m_pef.assign_texture(load_builtin_block_texture());
+    m_pop_ef.assign_texture(load_builtin_block_texture());
     m_blocks.set_size(conf.width, conf.height);
-    m_fef.setup(conf.width, conf.height, load_builtin_block_texture());
+    m_fall_ef.setup(conf.width, conf.height, load_builtin_block_texture());
     set_max_colors(conf.colors);
     for (auto & block : m_blocks) {
         block = random_color(m_rng);
     }
+    m_pop_singles_enabled = !conf.gameover_on_singles;
 }
 
 /* private */ void SameGame::update(double et) {
-    if (m_pef.has_effects()) {
-        m_pef.update(et);
-        if (!m_pef.has_effects()) {
-            make_blocks_fall(m_blocks, m_fef);
-        }
-    } else if (m_fef.has_effects()) {
-        m_fef.update(et);
-        if (!m_fef.has_effects() && !m_blocks.is_empty()) {
+    if (m_pop_ef.has_effects()) {
+        m_pop_ef.update(et);
+        if (!m_pop_ef.has_effects()) {
+            make_blocks_fall(m_blocks, m_fall_ef);
+            if (!m_fall_ef.has_effects()) {
+                try_sweep();
+            }
+        }        
+    } else if (m_fall_ef.has_effects()) {
+        m_fall_ef.update(et);
+        if (!m_fall_ef.has_effects() && !m_blocks.is_empty()) {
             try_sweep();
-        } else if (!m_fef.has_effects() && !m_sweep_temp.is_empty()) {
+        } else if (!m_fall_ef.has_effects() && !m_sweep_temp.is_empty()) {
             flip_along_trace(m_sweep_temp, m_blocks);
             m_sweep_temp.clear();
         }
@@ -210,14 +245,16 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
 }
 
 /* private */ void SameGame::draw(sf::RenderTarget & target, sf::RenderStates states) const {
+    draw_fill_with_background(target, m_blocks.width(), m_blocks.height());
+
     DrawRectangle drect;
     drect.set_size(k_block_size, k_block_size);
     drect.set_position(float(m_selection.x*k_block_size), float(m_selection.y*k_block_size));
     target.draw(drect);
 
-    target.draw(m_pef, states);
-    target.draw(m_fef, states);
-    if (!m_fef.has_effects()) {
+    target.draw(m_pop_ef , states);
+    target.draw(m_fall_ef, states);
+    if (!m_fall_ef.has_effects() && !m_pop_ef.has_effects()) {
         sf::Sprite brush;
         brush.setTexture(load_builtin_block_texture());
         render_merged_blocks(m_blocks, brush, target);
@@ -225,17 +262,19 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
 }
 
 /* private */ void SameGame::do_selection() {
-    if (m_pef.has_effects() || m_fef.has_effects()) return;
-    m_pef.do_pop(m_blocks, m_selection);
-    if (!m_pef.has_effects()) {
+    if (m_pop_ef.has_effects() || m_fall_ef.has_effects()) return;
+    m_pop_ef.do_pop(m_blocks, m_selection, m_pop_singles_enabled);
+    if (!m_pop_ef.has_effects()) {
         try_sweep();
     }
 }
 
 /* private */ void SameGame::try_sweep() {
     flip_along_trace(m_blocks, m_sweep_temp);
-    make_tetris_rows_fall(m_sweep_temp, m_fef);
-    if (m_fef.has_effects()) {
+    m_fall_ef.set_vector_transform(FallEffectsFull::flip_xy);
+    make_tetris_rows_fall(m_sweep_temp, m_fall_ef);
+    m_fall_ef.set_vector_transform(FallEffectsFull::identity_func);
+    if (m_fall_ef.has_effects()) {
         m_blocks.clear();
     } else {
         m_sweep_temp.clear();

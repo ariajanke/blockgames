@@ -19,7 +19,7 @@ public:
 
     void set_styles_ptr(StyleMapPtr);
 
-    static DialogPtr make_top_level_dialog();
+    static DialogPtr make_top_level_dialog(GameSelection);
 
 protected:
     void set_next_state(DialogPtr);

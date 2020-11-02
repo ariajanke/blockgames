@@ -13,6 +13,7 @@ namespace sf { class Sprite; }
 
 class FallEffectsFull final : public FallBlockEffects, public sf::Drawable {
 public:
+    using TransformVectorFunc = VectorI(*)(VectorI);
     void restart();
     void setup(int board_width, int board_height, const sf::Texture &);
     void update(double et);
@@ -20,7 +21,11 @@ public:
 
     void do_fall_in(Grid<int> & original_board, const Grid<int> & board_of_fallins);
 
+    void set_vector_transform(TransformVectorFunc f) { m_transf_v = f; }
+
     static void do_tests();
+    static VectorI identity_func(VectorI r) { return r; }
+    static VectorI flip_xy(VectorI r) { return VectorI(r.y, r.x); }
 private:
     struct FallEffect {
         int color = k_empty_block;
@@ -42,6 +47,7 @@ private:
     std::vector<double> m_rates_for_col;
     Grid<int> m_blocks_copy;
     const sf::Texture * m_texture = nullptr;
+    TransformVectorFunc m_transf_v = identity_func;
 };
 
 // ----------------------------------------------------------------------------
@@ -117,13 +123,17 @@ public:
 
 class SameGamePopEffects final : public PopEffectsPartial {
 public:
-    void do_pop(Grid<int> & grid, VectorI selection) {
+    void do_pop(Grid<int> & grid, VectorI selection, bool pop_single_blocks) {
         if (!grid.has_position(selection)) {
-            throw std::invalid_argument("");
+            throw std::invalid_argument("SameGamePopEffects::do_pop: selection is outside of the grid.");
         }
         if (grid(selection) == k_empty_block) return;
         set_internal_grid_copy(grid);
         auto selections = select_connected_blocks(grid, selection);
+        if (selections.size() == 1 && !pop_single_blocks) {
+            return;
+        }
+
         start();
         for (auto r : selections) {
             post_pop_effect(r, grid(r));

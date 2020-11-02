@@ -14,7 +14,7 @@ void DialogState::set_dialog(DialogPtr dialog) {
 
 /* private */ void DialogState::setup_(Settings & settings) {
     if (!m_dialog) {
-        m_dialog = Dialog::make_top_level_dialog();
+        m_dialog = Dialog::make_top_level_dialog(GameSelection::count);
     }
     m_dialog->setup(settings);
 }

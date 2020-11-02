@@ -37,7 +37,7 @@ void PuyoDialog::setup_() {
     });
 
     m_back.set_press_event([this]() {
-        set_next_state(Dialog::make_top_level_dialog());
+        set_next_state(Dialog::make_top_level_dialog(GameSelection::puyo_clone));
     });
     m_back.set_string(U"Back to menu");
 

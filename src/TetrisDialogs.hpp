@@ -53,11 +53,11 @@ private:
 
 // ----------------------------------------------------------------------------
 
-class PolyominoSetDialogPage final : public PolyominoDialogPage {
+class PolyominoSetSelectPage final : public PolyominoDialogPage {
 public:
     using BoardOptions = Settings::Board;
 
-    explicit PolyominoSetDialogPage(BoardOptions &);
+    explicit PolyominoSetSelectPage(BoardOptions &);
 
     PolyominoItr set
         (PolyominoItr cont_beg, PolyominoItr, PolyominoItr,
@@ -89,11 +89,13 @@ private:
 
     BoardConfigDialog m_board_config;
     ksg::TextArea m_poly_set_nfo;
+
+    ksg::TextArea m_all_off_notice;
 };
 
 // ----------------------------------------------------------------------------
 
-class PolyominoSelectDialogPage final : public PolyominoDialogPage {
+class PolyominoIndividualSelectPage final : public PolyominoDialogPage {
 public:
     PolyominoItr set
         (PolyominoItr cont_beg, PolyominoItr beg, PolyominoItr end,
@@ -111,6 +113,8 @@ private:
 
     EnabledPolyominoBits * m_enabled_polyominos = nullptr;
     std::size_t m_start_index;
+
+    ksg::TextArea m_activate_polyonmino_notice;
 
     std::vector<PolyominoButton> m_buttons;
     std::vector<ksg::TextArea  > m_poly_enabled_ta;
@@ -131,5 +135,7 @@ private:
     ksg::OptionsSlider m_page_slider;
 
     std::vector<PagePtr> m_pages;
+#   if 0
     EnabledPolyominoBits m_enabled_polyominos;
+#   endif
 };

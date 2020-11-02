@@ -188,7 +188,7 @@ void FallEffectsFull::do_fall_in
 /* private */ void FallEffectsFull::post_stationary_block
     (VectorI at, int color)
 {
-    m_blocks_copy(at) = color;
+    m_blocks_copy(m_transf_v(at)) = color;
 }
 
 /* private */ void FallEffectsFull::post_block_fall
@@ -198,10 +198,10 @@ void FallEffectsFull::do_fall_in
         throw std::invalid_argument("FallEffectsFull::post_block_fall: from and to cannot be the same location");
     }
     FallEffect effect;
-    effect.to = to;
-    effect.from = from;
+    effect.to    = m_transf_v(to  );
+    effect.from  = m_transf_v(from);
     effect.color = color;
-    effect.rate = m_rates_for_col[from.x];
+    effect.rate  = m_rates_for_col[from.x];
     m_fall_effects.push_back(effect);
 }
 

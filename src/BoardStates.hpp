@@ -36,6 +36,9 @@ protected:
         { return IntDistri(1, m_max_colors)(rng); }
 
     void set_max_colors(int);
+
+    static void draw_fill_with_background
+        (sf::RenderTarget &, int board_width, int board_height, VectorI offset = VectorI());
 private:
     int m_max_colors = k_min_colors;
 };
@@ -64,6 +67,7 @@ class TetrisState final : public BoardState {
     double m_fall_multiplier = 1.;
     double m_fall_delay = k_default_fall_delay;
     FallEffectsFull m_fef;
+    std::vector<Polyomino> m_available_polyominos;
 
     Rng m_rng { std::random_device()() };
 };
@@ -89,8 +93,9 @@ class SameGame final : public BoardState {
     VectorI m_selection;
     Grid<int> m_blocks;
     Grid<int> m_sweep_temp;
-    SameGamePopEffects m_pef;
-    FallEffectsFull m_fef;
+    SameGamePopEffects m_pop_ef;
+    FallEffectsFull m_fall_ef;
+    bool m_pop_singles_enabled = false;
 
     Rng m_rng { std::random_device()() };
 };

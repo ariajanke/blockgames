@@ -37,9 +37,10 @@ class FrameStretcher final : public ksg::Widget {
 
 class GameSelectionDialog final : public Dialog {
 public:
+    GameSelectionDialog(GameSelection);
+private:
     void setup_() override;
 
-private:
     ksg::TextArea m_sel_notice;
     ksg::TextArea m_desc_notice;
 
@@ -52,6 +53,8 @@ private:
     FrameStretcher m_stretcher;
 
     ksg::TextButton m_exit;
+
+    GameSelection m_starting_sel;
 };
 
 const char * game_name(GameSelection sel) {
@@ -114,8 +117,8 @@ void Dialog::set_styles_ptr(StyleMapPtr sptr)
     throw std::runtime_error("Dialog::get_styles: styles pointer has not been set yet.");
 }
 
-/* static */ DialogPtr Dialog::make_top_level_dialog()
-    { return make_dialog<GameSelectionDialog>(); }
+/* static */ DialogPtr Dialog::make_top_level_dialog(GameSelection gamesel)
+    { return make_dialog<GameSelectionDialog>(gamesel); }
 
 // ----------------------------------------------------------------------------
 
@@ -184,13 +187,13 @@ void BoardConfigDialog::assign_board_options(BoardOptions & opts)
     m_board_config.setup();
 
     m_back.set_press_event([this]() {
-        set_next_state(Dialog::make_top_level_dialog());
+        set_next_state(Dialog::make_top_level_dialog(GameSelection::samegame_clone));
     });
 
     begin_adding_widgets(get_styles()).
         add(m_about_single_block_popping).add_line_seperator().
         add(m_single_block_pop_notice).add_horizontal_spacer().add(m_single_block_pop).add_horizontal_spacer().add_line_seperator().
-        add(m_board_config).add_line_seperator().
+        add_horizontal_spacer().add(m_board_config).add_horizontal_spacer().add_line_seperator().
         add(m_back);
 }
 
@@ -209,6 +212,10 @@ std::vector<UString> number_range_to_strings(int min, int max) {
 
 namespace {
 
+GameSelectionDialog::GameSelectionDialog(GameSelection sel):
+    m_starting_sel(sel)
+{}
+
 void GameSelectionDialog::setup_() {
     using Game = GameSelection;
     m_sel_notice.set_string(U"Select a game to play.");
@@ -224,7 +231,9 @@ void GameSelectionDialog::setup_() {
     }
     m_game_slider.set_options(std::move(gamenames));
     }
-
+    if (m_starting_sel != GameSelection::count) {
+        m_game_slider.select_option(static_cast<std::size_t>(m_starting_sel));
+    }
     m_freeplay.set_press_event([this]() {
         set_next_state([this]() -> std::unique_ptr<AppState> {
             switch (to_game_selection(m_game_slider.selected_option_index())) {
