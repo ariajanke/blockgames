@@ -35,7 +35,6 @@ SOURCES += \
     ../src/Defs.cpp \
     ../src/FallingPiece.cpp \
     ../src/Polyomino.cpp \
-    ../src/GameDialogState.cpp \
     ../src/AppState.cpp \
     ../src/DialogState.cpp \
     ../src/TetrisDialogs.cpp \
@@ -68,7 +67,6 @@ HEADERS += \
     ../src/EffectsFull.hpp \
     ../src/FallingPiece.hpp \
     ../src/Polyomino.hpp \
-    ../src/GameDialogState.hpp \
     ../src/AppState.hpp \
     ../src/DialogState.hpp \
     ../src/TetrisDialogs.hpp \

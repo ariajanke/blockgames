@@ -17,6 +17,10 @@ public:
 
     virtual void setup(Params &) = 0;
     virtual Response on_turn_change() = 0;
+    virtual const char * name() const = 0;
+    virtual const char * description() const = 0;
+    virtual bool is_sequential() const = 0;
+    virtual ScenarioPtr clone() const = 0;
 
     double fall_speed() const;
     void assign_board(Grid<int> &);
@@ -31,6 +35,12 @@ public:
     static ScenarioPtr make_pop_forever();
     static ScenarioPtr make_glass_waves();
 
+    /** layout guaranteed to be:
+     *  is_sequential calls begin with false value then true
+     *  afterward each sequential stage is in order
+     */
+    static std::vector<ScenarioPtr> make_all_scenarios();
+
 protected:
     Grid<int> & board();
 
@@ -40,3 +50,4 @@ private:
     double m_fall_speed = 1.;
     Grid<int> * m_board = nullptr;
 };
+

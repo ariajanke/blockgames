@@ -245,6 +245,13 @@ void GameSelectionDialog::setup_() {
         }());
     });
 
+    m_scenario.set_press_event([this]() {
+        auto sel = to_game_selection(m_game_slider.selected_option_index());
+        if (sel == Game::puyo_clone) {
+            set_next_state(make_dialog<PuyoScenarioDialog>());
+        }
+    });
+
     m_settings.set_press_event([this]() {        
         switch (to_game_selection(m_game_slider.selected_option_index())) {
         case Game::puyo_clone  : set_next_state(make_dialog<PuyoDialog>()); break;

@@ -6,16 +6,25 @@ class Scenario;
 
 class ScenarioPriv {
     struct DefDeleter { void operator () (Scenario *) const; };
+    struct ConstDefDeleter { void operator () (const Scenario *) const; };
 public:
-    using UPtr = std::unique_ptr<Scenario, DefDeleter>;
+    using UPtr      = std::unique_ptr<      Scenario, DefDeleter>;
+    using ConstUPtr = std::unique_ptr<const Scenario, ConstDefDeleter>;
 };
 
-using ScenarioPtr = ScenarioPriv::UPtr;
+using ScenarioPtr      = ScenarioPriv::UPtr;
+using ConstScenarioPtr = ScenarioPriv::ConstUPtr;
+
+ConstScenarioPtr move(ScenarioPtr &);
 
 class PuyoState final : public BoardState {
 public:
     // needed by Scenario
     using Response = MultiType<std::pair<int, int>, Grid<int>>;
+    PuyoState() {}
+    explicit PuyoState(ScenarioPtr sptr):
+        m_current_scenario(std::move(sptr))
+    {}
 private:
     using UpdateFunc = void(PuyoState::*)(double);
 

@@ -17,12 +17,21 @@ VectorI get_spawn_point(const Grid<int> &);
 
 } // end of <anonymous> namespace
 
-void ScenarioPriv::DefDeleter::operator () (Scenario * ptr) const { delete ptr; }
+void ScenarioPriv::DefDeleter::operator () (Scenario * ptr) const
+    { ConstDefDeleter()(ptr); }
+
+void ScenarioPriv::ConstDefDeleter::operator () (const Scenario * ptr) const
+    { delete ptr; }
+
+ConstScenarioPtr move(ScenarioPtr & ptr)
+    { return ConstScenarioPtr(ptr.release()); }
 
 void PuyoState::setup_board(const Settings & settings) {
     m_pef.assign_texture(load_builtin_block_texture());
 
-    m_current_scenario = Scenario::make_glass_waves();
+    if (!m_current_scenario) {
+        m_current_scenario = Scenario::make_glass_waves();
+    }
     m_current_scenario->assign_board(m_blocks);
     Scenario::Params p;
     m_current_scenario->setup(p);
@@ -40,7 +49,7 @@ void PuyoState::setup_board(const Settings & settings) {
         p.max_colors = conf.colors;
     }
     m_pop_requirement = settings.puyo.pop_requirement;
-    m_fall_delay = settings.puyo.fall_speed;
+    m_fall_delay = 1. / settings.puyo.fall_speed;
     }
     m_blocks.set_size(p.board_width, p.board_height);
     m_fef.setup(p.board_width, p.board_height, load_builtin_block_texture());

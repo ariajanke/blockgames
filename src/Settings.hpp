@@ -28,13 +28,15 @@ struct Settings {
     };
     struct Puyo : public Board {
         Puyo();
-        int pop_requirement = 2;
-        double fall_speed = 0.5;
+        int pop_requirement = 4;
+        double fall_speed = 1.5;
+
+        int scenario_number = k_free_play_scenario;
     };
     struct Tetris : public Board {
         Tetris();
         PolyominoEnabledSet enabled_polyominos = enable_tetromino_only();
-        double fall_speed = 0.5;
+        double fall_speed = 1.5;
     };
     struct SameGame : public Board {
         SameGame();

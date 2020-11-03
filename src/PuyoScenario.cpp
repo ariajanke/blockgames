@@ -6,22 +6,53 @@ using Rng = std::default_random_engine;
 using IntDistri = std::uniform_int_distribution<int>;
 using Response = Scenario::Response;
 
-class ForeverPop final : public Scenario {
+template <typename T, typename ... Args>
+ScenarioPtr make_scenario(Args ... args) {
+    static_assert(std::is_base_of_v<Scenario, T>, "");
+    return ScenarioPtr(new T(std::forward(args)...));
+}
+
+class SequentialScenario : public Scenario {
+    bool is_sequential() const final { return true; }
+};
+
+class NonSequentialScenario : public Scenario {
+    bool is_sequential() const final { return false; }
+};
+
+class ForeverPop final : public NonSequentialScenario {
     void setup(Params &) override
         { m_rng = Rng { std::random_device()() }; }
 
     Response on_turn_change() override;
+
+    const char * name() const override { return "Pop Forever"; }
+    const char * description() const override {
+        return "A \"non-playable\" scenario. Where the board will pop blocks "
+               "forever for your viewing pleasure.";
+    }
+    ScenarioPtr clone() const override { return make_scenario<ForeverPop>(); }
+
     Rng m_rng;
 };
 
-class GlassWaves final : public Scenario {
+class GlassWaves final : public NonSequentialScenario {
 public:
     void setup(Params &) override;
     Response on_turn_change() override;
+
+    const char * name() const override { return "Glass Waves"; }
+    const char * description() const override {
+        return "An unending scenario. Try not to get buried in glass blocks!";
+    }
+    ScenarioPtr clone() const override { return make_scenario<GlassWaves>(); }
+
 private:
     int m_turn_num = 0;
     Rng m_rng;
 };
+
+std::vector<ScenarioPtr> verify_guarantees(std::vector<ScenarioPtr> &&);
 
 } // end of <anonymous> namespace
 
@@ -46,6 +77,13 @@ void Scenario::assign_board(Grid<int> & grid)
 
 /* static */ ScenarioPtr Scenario::make_glass_waves()
     { return make_scenario<GlassWaves>(); }
+
+/* static */ std::vector<ScenarioPtr> Scenario::make_all_scenarios() {
+    std::vector<ScenarioPtr> rv;
+    rv.emplace_back(make_pop_forever());
+    rv.emplace_back(make_glass_waves());
+    return verify_guarantees(std::move(rv));
+}
 
 namespace {
 
@@ -105,6 +143,20 @@ namespace {
         }
     }
     return rv;
+}
+
+std::vector<ScenarioPtr> verify_guarantees(std::vector<ScenarioPtr> && rv) {
+    bool reached_end_of_ns = false;
+    for (auto & uptr : rv) {
+        if (uptr->is_sequential()) {
+            reached_end_of_ns = true;
+        } else {
+            if (reached_end_of_ns) {
+                throw std::invalid_argument("verify_guarantees: non-sequentials must all come before sequentials");
+            }
+        }
+    }
+    return std::move(rv);
 }
 
 } // end of <anonymous> namespace
