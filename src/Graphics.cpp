@@ -65,13 +65,18 @@ const uint8_t * get_icon_image() {
     const auto & blocks = builtin_blocks();
     using std::make_tuple;
 
-    auto unmerged_block = make_const_sub_grid(blocks, VectorI(3, 3)*k_block_size, k_block_size, k_block_size);
+    auto make_unmerged_block = [](int group) {
+        auto r = std::get<1>(get_color_group_info(group));
+        r += VectorI(3, 3)*k_block_size;
+        return make_const_sub_grid(builtin_blocks(), r, k_block_size, k_block_size);
+    };
+
     auto glass_block = make_const_sub_grid(blocks, VectorI(1, 2*4)*k_block_size, k_block_size, k_block_size);
     auto list = {
         make_tuple(sf::Color::White, glass_block, VectorI(k_block_size, k_block_size)),
-        make_tuple(get_group_color_value(1), unmerged_block, VectorI(k_block_size, 0)),
-        make_tuple(get_group_color_value(2), unmerged_block, VectorI(0, k_block_size)),
-        make_tuple(get_group_color_value(3), unmerged_block, VectorI(0, 0))
+        make_tuple(get_group_color_value(1), make_unmerged_block(1), VectorI(k_block_size, 0)),
+        make_tuple(get_group_color_value(2), make_unmerged_block(2), VectorI(0, k_block_size)),
+        make_tuple(get_group_color_value(3), make_unmerged_block(3), VectorI(0, 0))
     };
     for (const auto & [fullbright, srcgrid, offset] : list) {
         for (VectorI r; r != srcgrid.end_position(); r = srcgrid.next(r)) {
@@ -428,12 +433,12 @@ const char * get_color_mask_impl(int n) {
         """                "// 2
         """       XX       "// 3
         """      XXXX      "// 4
-        """   XXX    XXX   "// 5
+        """   XXXX  XXXX   "// 5
         """    XX    XX    "// 6
         """     XX  XX     "// 7
-        """      XXXX      "// 8
-        """     XX  XX     "// 9
-        """    X XXXX X    "// A
+        """      XX X      "// 8
+        """     XXXXXX     "// 9
+        """    XXXXXXXX    "// A
         """    XX    XX    "// B
         """    X      X    "// C
         """                "// D
@@ -478,7 +483,25 @@ const char * get_color_mask_impl(int n) {
         """                "// E
         """                "// F
         ;
-    case 4:
+    case 4: return
+        // 0123456789ABCDEF
+        """                "// 0
+        """                "// 1
+        """                "// 2
+        """     XXXXXX     "// 3
+        """    XXX  XXX    "// 4
+        """   XX  XX  XX   "// 5
+        """   XX XXXX XX   "// 6
+        """   X XX  XX X   "// 7
+        """   X XX  XX X   "// 8
+        """   XX XXXX XX   "// 9
+        """   XX  XX  XX   "// A
+        """    XXX  XXX    "// B
+        """     XXXXXX     "// C
+        """                "// D
+        """                "// E
+        """                "// F
+        ;
     case 5: return
         // 0123456789ABCDEF
         """                "// 0
@@ -488,8 +511,8 @@ const char * get_color_mask_impl(int n) {
         """       XX       "// 4
         """       XX       "// 5
         """      XXXX      "// 6
-        """   XXXXXXXXXX   "// 7
-        """    XXXXXXXX    "// 8
+        """   XXXX  XXXX   "// 7
+        """    XXX  XXX    "// 8
         """      XXXX      "// 9
         """       XX       "// A
         """       XX       "// B

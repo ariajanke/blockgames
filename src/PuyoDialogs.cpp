@@ -10,6 +10,7 @@
 
 void PuyoDialog::setup_() {
     set_title(U"Puyo Clone (Free Play) Setting");
+    set_drag_enabled(false);
 
     m_pop_req_notice.set_string(U"Pop Requirement");
     m_fall_speed_notice.set_string(U"Fall Speed\n(blocks/sec)");
@@ -86,6 +87,7 @@ const ConstScenarioCont s_scenarios =
 
 /* private */ void PuyoScenarioDialog::setup_() {
     set_title(U"Scenario Select");
+    set_drag_enabled(false);
 #   if 0
     m_title.set_character_size(24.f);
     m_title.set_string(U"Scenario Select");

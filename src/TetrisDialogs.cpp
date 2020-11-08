@@ -254,6 +254,9 @@ void PolyominoIndividualSelectPage::update_selections() {
 // ----------------------------------------------------------------------------
 
 /* private */ void PolyominoSelectDialog::setup_() {
+    set_title(U"Tetris Settings");
+    set_drag_enabled(false);
+
     const auto & all_p = Polyomino::all_polyminos();
     m_pages.emplace_back(std::make_unique<PolyominoSetSelectPage>(settings().tetris));
     for (auto itr = all_p.begin(); true;) {

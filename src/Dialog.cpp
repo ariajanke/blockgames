@@ -168,6 +168,9 @@ void BoardConfigDialog::assign_board_options(BoardOptions & opts)
 // ----------------------------------------------------------------------------
 
 /* private */ void SameGameDialog::setup_() {
+    set_title(U"Same Game Settings");
+    set_drag_enabled(false);
+
     m_about_single_block_popping.set_string(
         U"Enabling single block popping will cause the game to not\n"
          "end when only single blocks remain. The downside is that\n"
@@ -218,6 +221,7 @@ GameSelectionDialog::GameSelectionDialog(GameSelection sel):
 void GameSelectionDialog::setup_() {
     using Game = GameSelection;
     set_title(U"Game Selection");
+    set_drag_enabled(false);
 
     m_freeplay.set_string(U"Free Play");
     m_scenario.set_string(U"Scenarios");

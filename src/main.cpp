@@ -8,6 +8,8 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/Event.hpp>
 
+#include <common/ParseOptions.hpp>
+
 #include <thread>
 
 #include <cassert>
@@ -32,12 +34,21 @@ private:
     //VectorI m_old_pos;
 };
 
+struct ProgramOptions {
+};
+
+void parse_save_builtin_to_file_system(ProgramOptions &, char ** beg, char ** end);
+void save_icon_to_file(ProgramOptions &, char ** beg, char ** end);
+
 } // end of <anonymous> namespace
 
 int main(int argc, char ** argv) {
+    parse_options<ProgramOptions>(argc, argv, {
+        { "save-builtin", 'b', parse_save_builtin_to_file_system },
+        { "save-icon"   , 'i', save_icon_to_file                 }
+    });
     FallEffectsFull::do_tests();
     do_tests();
-
 
     std::unique_ptr<AppState> app_state = std::make_unique<DialogState>();
     SettingsPtr settings_ptr;
@@ -242,6 +253,32 @@ VectorI WindowAnchor::adjusted_position_for(const AppState & app_state) const {
     return VectorI(m_anchor.x - int(app_state.window_size().x / 2u),
                    m_anchor.y - int(app_state.window_size().y / 2u));
 #   endif
+}
+
+void parse_save_builtin_to_file_system
+    (ProgramOptions &, char ** beg, char ** end)
+{
+    if (end == beg) return;
+    load_builtin_block_texture().copyToImage().saveToFile(*beg);
+}
+
+void save_icon_to_file(ProgramOptions &, char ** beg, char ** end) {
+    if (end == beg) return;
+
+    sf::Image img;
+    img.create(k_icon_size, k_icon_size);
+    auto * data     = reinterpret_cast<const sf::Color *>(get_icon_image());
+    auto * data_end = data + k_icon_size*k_icon_size;
+    VectorI r;
+    for (auto itr = data; itr != data_end; ++itr) {
+        img.setPixel(unsigned(r.x), unsigned(r.y), *itr);
+        ++r.x;
+        if (r.x == k_icon_size) {
+            ++r.y;
+            r.x = 0;
+        }
+    }
+    img.saveToFile(*beg);
 }
 
 } // end of <anonymous> namespace
