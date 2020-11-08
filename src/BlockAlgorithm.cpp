@@ -172,6 +172,48 @@ bool pop_connected_blocks
     return any_popped;
 }
 
+bool pop_columns_blocks(Grid<int> & blocks, int pop_requirement, PopEffects & effects) {
+    struct IterGroup {
+        VectorI beg, step, sweep_step;
+    };
+
+    effects.start();
+    auto finisher = make_finisher(effects);
+
+    static const VectorI k_no_match(-1, -1);
+
+    bool any_popped = false;
+    static const auto k_scan_list = {
+        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI( 0,  1) },
+        IterGroup { VectorI(0, 0), VectorI(0, 1), VectorI( 1,  0) },
+        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI( 1,  1) },
+        IterGroup { VectorI(0, 0), VectorI(0, 1), VectorI( 1,  1) },
+        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI(-1,  1) },
+        IterGroup { VectorI(blocks.width() - 1, 0), VectorI(0, 1), VectorI(-1,  1) }
+    };
+    for (const auto & group : k_scan_list) {
+    for (auto r = group.beg; blocks.has_position(r); r += group.step) {
+        int count = 0;
+        for (auto t = r; blocks.has_position(t); t += group.sweep_step) {
+            if (blocks(t) == k_empty_block) {
+                if (count >= pop_requirement) {}
+                count = 0;
+            } else if (count == 0 && blocks(t) != k_empty_block) {
+                count = 1;
+            } else if (count && blocks(t) != blocks(t - count*group.sweep_step)) {
+                if (count >= pop_requirement) {}
+                count = 1;
+            } else if (count && blocks(t) == blocks(t - count*group.sweep_step)) {
+                ++count;
+            }
+        }
+        if (count >= pop_requirement) {
+
+        }
+    }}
+    return any_popped;
+}
+
 int clear_tetris_rows(Grid<int> & blocks, PopEffects & effects) {
     effects.start();
     auto finisher = make_finisher(effects);

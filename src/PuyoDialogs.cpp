@@ -9,6 +9,8 @@
 #include <cassert>
 
 void PuyoDialog::setup_() {
+    set_title(U"Puyo Clone (Free Play) Setting");
+
     m_pop_req_notice.set_string(U"Pop Requirement");
     m_fall_speed_notice.set_string(U"Fall Speed\n(blocks/sec)");
 
@@ -17,8 +19,7 @@ void PuyoDialog::setup_() {
 
     m_pop_req_slider.set_options(number_range_to_strings(k_min_pop_req, k_max_pop_req));
     m_pop_req_slider.select_option(settings().puyo.pop_requirement - k_min_pop_req);
-    // I should *not* have to set the slider's size
-    m_pop_req_slider.set_size(120, 40);
+
     m_pop_req_slider.set_option_change_event([this]() {
         settings().puyo.pop_requirement = int(m_pop_req_slider.selected_option_index()) + k_min_pop_req;
     });
@@ -66,6 +67,8 @@ using ConstScenarioCont = std::vector<ConstScenarioPtr>;
 using ScenarioStrFunc = const char * (Scenario::*)() const;
 using TextSize = ksg::Text::TextSize;
 
+static constexpr const int k_wrap_limit = 80;
+
 template <typename T, typename U>
 std::vector<T> move_and_convert(std::vector<U> &&);
 
@@ -74,27 +77,33 @@ const sf::Font & get_global_font(const ksg::StyleMap &);
 template <ScenarioStrFunc get_str>
 TextSize get_max_dims(const sf::Font &, const ConstScenarioCont &, int char_size);
 
+UString wrap_string(const UString &);
+
 const ConstScenarioCont s_scenarios =
     move_and_convert<ConstScenarioPtr>(Scenario::make_all_scenarios());
 
 } // end of <anonymous> namespace
 
 /* private */ void PuyoScenarioDialog::setup_() {
-    m_title.set_character_size(20.f);
+    set_title(U"Scenario Select");
+#   if 0
+    m_title.set_character_size(24.f);
     m_title.set_string(U"Scenario Select");
-
+#   endif
     m_scen_select_notice.set_string(
-        U"When you select a free play scanario, it will become the scenario "
+        U"When you select a free play scanario, it will become the scenario\n"
          "you play when you click \"Free Play\" on the main menu.");
 
     static const constexpr int k_char_size = 18;
     const sf::Font & font = get_global_font(get_styles());
 
     m_name_notice.set_string(U"Name:");
+    m_name_notice.set_character_size(22);
     auto sz = get_max_dims<&Scenario::name>(font, s_scenarios, k_char_size);
     m_name.set_size(sz.width, sz.height);
 
     m_desc_notice.set_string(U"Description:");
+    m_desc_notice.set_character_size(22);
     sz = get_max_dims<&Scenario::description>(font, s_scenarios, k_char_size);
     m_desc.set_size(sz.width, sz.height);
 
@@ -129,7 +138,9 @@ const ConstScenarioCont s_scenarios =
 
     flip_to_scenario();
     begin_adding_widgets(get_styles()).
+#       if 0
         add_horizontal_spacer().add(m_title).add_horizontal_spacer().add_line_seperator().
+#       endif
         add(m_scen_select_notice).add_line_seperator().
         add(m_name_notice).add_line_seperator().
         /*add_horizontal_spacer().*/add(m_name).add_line_seperator().
@@ -141,8 +152,9 @@ const ConstScenarioCont s_scenarios =
 
 /* private */ void PuyoScenarioDialog::flip_to_scenario() {
     const Scenario & scen = get_selected_scenario();
-    m_name.set_string(to_ustring(scen.name       ()));
-    m_desc.set_string(to_ustring(scen.description()));
+    assert(strlen(scen.name()) <= k_wrap_limit);
+    m_name.set_string(            to_ustring(scen.name       ()) );
+    m_desc.set_string(wrap_string(to_ustring(scen.description())));
     if (!scen.is_sequential()) {
         settings().puyo.scenario_number = int(m_scenario_slider.selected_option_index());
     }
@@ -192,12 +204,25 @@ TextSize get_max_dims(const sf::Font & font, const ConstScenarioCont & cont, int
         temp.clear();
         temp.reserve(gv_end - gv);
         for (auto itr = gv; itr != gv_end; ++itr) temp += UChar(*itr);
-
+        temp = wrap_string(temp);
         auto sz = ksg::Text::measure_text(font, unsigned(char_size), temp);
         rv.width  = std::max(rv.width , sz.width );
         rv.height = std::max(rv.height, sz.height);
     }
     return rv;
+}
+
+UString wrap_string(const UString & ustr) {
+    using Iter = UString::const_iterator;
+    UString t;
+    t.reserve(ustr.size() + (ustr.size() % k_wrap_limit) + 3);
+    wrap_string_as_monowidth(ustr.begin(), ustr.end(), k_wrap_limit,
+        [&t](Iter beg, Iter end)
+    {
+        t.insert(t.end(), beg, end);
+        t += U"\n";
+    });
+    return t;
 }
 
 } // end of <anonymous> namespace

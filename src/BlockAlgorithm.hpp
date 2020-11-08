@@ -44,4 +44,7 @@ std::vector<VectorI> select_connected_blocks(const Grid<int> &, VectorI);
 
 bool pop_connected_blocks(Grid<int> &, int amount_required, PopEffects & = PopEffects::default_instance());
 
+// wip
+bool pop_columns_blocks(Grid<int> &, int pop_requirement, PopEffects & = PopEffects::default_instance());
+
 int clear_tetris_rows(Grid<int> &, PopEffects & = PopEffects::default_instance());

@@ -22,11 +22,84 @@ inline void assert_(bool b) { assert(b); }
 
 sf::Vector2i center_screen(const AppState &);
 
+class WindowAnchor {
+public:
+    WindowAnchor(const sf::RenderWindow &, const AppState &);
+    void update_position(const sf::RenderWindow &);
+    VectorI adjusted_position_for(const AppState &) const;
+private:
+    VectorI m_anchor;
+    //VectorI m_old_pos;
+};
+
 } // end of <anonymous> namespace
 
 int main(int argc, char ** argv) {
     FallEffectsFull::do_tests();
     do_tests();
+
+
+    std::unique_ptr<AppState> app_state = std::make_unique<DialogState>();
+    SettingsPtr settings_ptr;
+    app_state->setup(settings_ptr);
+
+    sf::RenderWindow win;
+
+    win.create(sf::VideoMode(1, 1), "Block Games", sf::Style::Default);
+    win.setPosition(center_screen(*app_state));
+
+    std::this_thread::sleep_for(std::chrono::microseconds(250000));
+    win.setSize(sf::Vector2u(app_state->window_size().x, app_state->window_size().y));
+    auto sz = win.getPosition();
+    win.setPosition(sz);
+    auto sz2 = win.getPosition();
+
+    win.setFramerateLimit(60u);
+    win.setView(app_state->window_view());
+    win.setIcon(unsigned(k_icon_size), unsigned(k_icon_size), get_icon_image());
+    sz = win.getPosition();
+
+    WindowAnchor anchor(win, *app_state);
+    while (win.isOpen()) {
+        {
+        sf::Event event;
+        while (win.pollEvent(event)) {
+            switch (event.type) {
+            case sf::Event::Closed: win.close();
+                break;
+            case sf::Event::KeyReleased:
+                break;
+            default: break;
+            }
+            app_state->process_event(event);
+        }
+        }
+        anchor.update_position(win);
+
+        app_state->update(1. / 60.);
+        if (auto new_state = app_state->next_state()) {
+            new_state.swap(app_state);
+            if (app_state->is_quiting_application())
+                return 0;
+            app_state->setup(settings_ptr);
+            win.setSize(app_state->window_size());
+#           if 0
+            win.setPosition(anchor.adjusted_position_for(*app_state));
+#           endif
+            win.setView(app_state->window_view());
+        }
+
+        win.clear();
+        win.draw(*app_state);
+        win.display();
+        std::this_thread::sleep_for(std::chrono::microseconds(16667));
+    }
+    return 0;
+}
+
+namespace {
+
+void do_tests() {
     assert(GetEdgeValue<>::k_value == TileEdges().to_ulong());
     assert(GetEdgeValue<k_left_edge>::k_value == TileEdges().set(k_left_edge).to_ulong());
     assert(GetEdgeValue<k_right_edge>::k_value == TileEdges().set(k_right_edge).to_ulong());
@@ -48,59 +121,6 @@ int main(int argc, char ** argv) {
 
     assert(GetEdgeValue<k_left_edge>::k_value == TileEdges().set(k_left_edge).to_ulong());
 
-    std::unique_ptr<AppState> app_state = std::make_unique<DialogState>();
-    SettingsPtr settings_ptr;
-    app_state->setup(settings_ptr);
-
-    sf::RenderWindow win;
-
-    win.create(sf::VideoMode(1, 1), "Aria's Stupid Puyo Game", sf::Style::Default);
-    win.setPosition(center_screen(*app_state));
-
-    std::this_thread::sleep_for(std::chrono::microseconds(250000));
-    win.setSize(sf::Vector2u(app_state->window_size().x, app_state->window_size().y));
-
-    win.setFramerateLimit(60u);
-    win.setView(app_state->window_view());
-    win.setIcon(unsigned(k_icon_size), unsigned(k_icon_size), get_icon_image());
-
-    while (win.isOpen()) {
-        {
-        sf::Event event;
-        while (win.pollEvent(event)) {
-            switch (event.type) {
-            case sf::Event::Closed: win.close();
-                break;
-            case sf::Event::KeyReleased:
-                break;
-            default: break;
-            }
-            app_state->process_event(event);
-        }
-        }
-
-        app_state->update(1. / 60.);
-        if (auto new_state = app_state->next_state()) {
-            new_state.swap(app_state);
-            if (app_state->is_quiting_application())
-                return 0;
-            app_state->setup(settings_ptr);
-            win.setSize(app_state->window_size());
-            win.setPosition(center_screen(*app_state));
-            win.setView(app_state->window_view());
-        }
-
-        win.clear();
-        win.draw(*app_state);
-        win.display();
-        std::this_thread::sleep_for(std::chrono::microseconds(16667));
-    }
-    return 0;
-}
-
-namespace {
-
-void do_tests() {
     {
     auto g = make_grid({
        { 0, 1, 2 },
@@ -195,6 +215,33 @@ sf::Vector2i center_screen(const AppState & app_state) {
         (int(screen_nfo.width ) - app_state.window_size().x) / 2,
         (int(screen_nfo.height) - app_state.window_size().y) / 2);
 
+}
+
+WindowAnchor::WindowAnchor
+    (const sf::RenderWindow & win, const AppState &)
+    //m_anchor(center_screen(app_state))//, m_old_pos(win.getPosition())
+{
+    //auto screen_nfo = sf::VideoMode::getDesktopMode();
+    m_anchor = win.getPosition();//VectorI(int(screen_nfo.width / 2), int(screen_nfo.height / 2));
+}
+
+void WindowAnchor::update_position(const sf::RenderWindow & win) {
+    return;
+    auto new_anchor = win.getPosition();
+    auto win_size = win.getSize();
+#   if 0
+    new_anchor.x += int(win.getSize().x) / 2;
+    new_anchor.y += int(win.getSize().y) / 2;
+#   endif
+    m_anchor = new_anchor;
+}
+
+VectorI WindowAnchor::adjusted_position_for(const AppState & app_state) const {
+    //return m_anchor;
+#   if 1
+    return VectorI(m_anchor.x - int(app_state.window_size().x / 2u),
+                   m_anchor.y - int(app_state.window_size().y / 2u));
+#   endif
 }
 
 } // end of <anonymous> namespace

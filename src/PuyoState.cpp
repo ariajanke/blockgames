@@ -9,9 +9,6 @@
 namespace {
 
 void all_blocks_fall_out(Grid<int> &, FallBlockEffects &);
-#if 0
-void all_blocks_in_column_fall_out(Grid<int> &, FallBlockEffects &, int col);
-#endif
 
 VectorI get_spawn_point(const Grid<int> &);
 
@@ -236,23 +233,6 @@ void all_blocks_fall_out(Grid<int> & blocks, FallBlockEffects & effects) {
     }
     effects.finish();
 }
-#if 0
-void all_blocks_in_column_fall_out
-    (Grid<int> & blocks, FallBlockEffects & effects, int col)
-{
-    effects.start();
-    for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
-        if (r.x != col) effects.post_stationary_block(r, blocks(r));
-    }
-    for (int y = 0; y != blocks.height(); ++y) {
-        if (blocks(col, y) == k_empty_block) continue;
-        effects.post_block_fall(
-            VectorI(col, y), VectorI(col, blocks.height()), blocks(col, y));
-        blocks(col, y) = k_empty_block;
-    }
-    effects.finish();
-}
-#endif
 
 VectorI get_spawn_point(const Grid<int> & board) {
     auto w = board.width();

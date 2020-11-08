@@ -40,8 +40,10 @@ public:
     GameSelectionDialog(GameSelection);
 private:
     void setup_() override;
-
+    void on_game_selection_update();
+#   if 0
     ksg::TextArea m_sel_notice;
+#   endif
     ksg::TextArea m_desc_notice;
 
     ksg::TextButton m_freeplay;
@@ -123,16 +125,11 @@ void Dialog::set_styles_ptr(StyleMapPtr sptr)
 // ----------------------------------------------------------------------------
 
 void BoardConfigDialog::setup() {
-
     m_board_config_notice.set_string(U"Configure board width, height,\nand maximum number of colors.");
 
     m_width_label.set_string(U"Width");
     m_height_label.set_string(U"Height");
     m_num_of_colors_label.set_string(U"Max Colors");
-
-    for (auto * slider : { &m_width_sel, &m_height_sel, &m_number_of_colors_sel }) {
-        slider->set_size(150.f, 40.f);
-    }
 
     m_width_sel.set_options(number_range_to_strings(k_min_board_size, k_max_board_size));
     m_height_sel.set_options(number_range_to_strings(k_min_board_size, k_max_board_size));
@@ -150,6 +147,8 @@ void BoardConfigDialog::setup() {
     m_number_of_colors_sel.set_option_change_event([this]() {
         board_options().colors = k_min_colors + int(m_number_of_colors_sel.selected_option_index());
     });
+
+    set_frame_border_size(0.f);
 
     begin_adding_widgets().
         add(m_board_config_notice).add_line_seperator().
@@ -218,7 +217,7 @@ GameSelectionDialog::GameSelectionDialog(GameSelection sel):
 
 void GameSelectionDialog::setup_() {
     using Game = GameSelection;
-    m_sel_notice.set_string(U"Select a game to play.");
+    set_title(U"Game Selection");
 
     m_freeplay.set_string(U"Free Play");
     m_scenario.set_string(U"Scenarios");
@@ -234,6 +233,11 @@ void GameSelectionDialog::setup_() {
     if (m_starting_sel != GameSelection::count) {
         m_game_slider.select_option(static_cast<std::size_t>(m_starting_sel));
     }
+    m_game_slider.set_option_change_event([this]() {
+        on_game_selection_update();
+    });
+    on_game_selection_update();
+
     m_freeplay.set_press_event([this]() {
         set_next_state([this]() -> std::unique_ptr<AppState> {
             switch (to_game_selection(m_game_slider.selected_option_index())) {
@@ -265,7 +269,6 @@ void GameSelectionDialog::setup_() {
         { set_next_state(std::make_unique<QuitState>()); });
 
     begin_adding_widgets(get_styles()).
-        add_horizontal_spacer().add(m_sel_notice).add_horizontal_spacer().add_line_seperator().
         add_horizontal_spacer().add(m_game_slider).add_horizontal_spacer().add_line_seperator().
         add(m_desc_notice).add_line_seperator().
         add_horizontal_spacer().add(m_freeplay).add_horizontal_spacer().
@@ -273,6 +276,18 @@ void GameSelectionDialog::setup_() {
         add(m_stretcher).add_line_seperator().
         add_horizontal_spacer().add(m_exit).add_horizontal_spacer();
 
+}
+
+void GameSelectionDialog::on_game_selection_update() {
+    using Game = GameSelection;
+    switch (to_game_selection(m_game_slider.selected_option_index())) {
+    case Game::puyo_clone:
+        m_scenario.set_visible(true);
+        break;
+    default:
+        m_scenario.set_visible(false);
+        break;
+    }
 }
 
 } // end of <anonymous> namespace

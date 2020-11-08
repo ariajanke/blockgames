@@ -68,6 +68,7 @@ PolyominoItr PolyominoSetSelectPage::set
     (PolyominoItr cont_beg, PolyominoItr, PolyominoItr,
      EnabledPolyominoBits & enabledbits)
 {
+    set_frame_border_size(0.f);
     m_enabled_polyominos = &enabledbits;
     setup();
     return cont_beg;
@@ -177,6 +178,7 @@ PolyominoItr PolyominoIndividualSelectPage::set
     (PolyominoItr cont_beg, PolyominoItr beg, PolyominoItr end,
      EnabledPolyominoBits & enabledbits)
 {
+    set_frame_border_size(0.f);
     assert(cont_beg <= beg);
     assert(beg <= end);
     auto rv = beg + std::min(int(end - beg), k_max_polyominos_per_page);
