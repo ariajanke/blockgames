@@ -71,7 +71,7 @@ Polyomino to_polyomino(std::initializer_list<VectorI> &&);
     rv[static_cast<int>(Tetromino::o)].disable_rotation();
     // S-Block
     rv[static_cast<int>(Tetromino::s)] = to_polyomino({
-                     Vec(0,  1), Vec(1,  1),
+                     Vec(0, -1), Vec(1, -1),
         Vec(-1,  0), Vec(0,  0),
     });
     // T-Block

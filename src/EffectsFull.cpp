@@ -224,7 +224,7 @@ void FallEffectsFull::do_fall_in
         target.draw(brush, states);
     }
     brush.setPosition(0.f, 0.f);
-    render_merged_blocks(m_blocks_copy, brush, target);
+    (m_render_merged ? render_merged_blocks : render_blocks)(m_blocks_copy, brush, target);
 }
 
 // ----------------------------------------------------------------------------

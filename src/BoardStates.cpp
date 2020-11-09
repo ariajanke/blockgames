@@ -74,10 +74,12 @@ using InvArg       = std::invalid_argument;
 
     reset_piece();
     m_fef.setup(conf.width, conf.height, load_builtin_block_texture());
+    m_fef.set_render_blocks_merged_enabled(false);
     set_max_colors(conf.colors);
 }
 
 /* private */ void TetrisState::update(double et) {
+    if (m_pause) return;
     if (m_fef.has_effects()) {
         m_fef.update(et);
     } else if ((m_fall_time += (et*m_fall_multiplier)) > m_fall_delay) {
@@ -99,20 +101,23 @@ using InvArg       = std::invalid_argument;
         }
     } else if (event.type == sf::Event::KeyReleased) {
         switch (event.key.code) {
+        case sf::Keyboard::Return:
+            m_pause = !m_pause;
+            break;
         case sf::Keyboard::A:
-            m_piece.rotate_left(m_blocks);
+            if (!m_pause) m_piece.rotate_left(m_blocks);
             break;
         case sf::Keyboard::S:
-            m_piece.rotate_right(m_blocks);
+            if (!m_pause) m_piece.rotate_right(m_blocks);
             break;
         case sf::Keyboard::Down:
             m_fall_multiplier = 1.;
             break;
         case sf::Keyboard::Left:
-            m_piece.move_left(m_blocks);
+            if (!m_pause) m_piece.move_left(m_blocks);
             break;
         case sf::Keyboard::Right:
-            m_piece.move_right(m_blocks);
+            if (!m_pause) m_piece.move_right(m_blocks);
             break;
         default: break;
         }
@@ -245,7 +250,9 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
 }
 
 /* private */ void SameGame::draw(sf::RenderTarget & target, sf::RenderStates states) const {
-    draw_fill_with_background(target, m_blocks.width(), m_blocks.height());
+    draw_fill_with_background(target,
+        m_blocks.is_empty() ? m_sweep_temp.height() : m_blocks.width (),
+        m_blocks.is_empty() ? m_sweep_temp.width () : m_blocks.height());
 
     DrawRectangle drect;
     drect.set_size(k_block_size, k_block_size);

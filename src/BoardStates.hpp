@@ -70,6 +70,7 @@ class TetrisState final : public BoardState {
     std::vector<Polyomino> m_available_polyominos;
 
     Rng m_rng { std::random_device()() };
+    bool m_pause = false;
 };
 
 // ----------------------------------------------------------------------------

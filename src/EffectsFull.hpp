@@ -22,6 +22,7 @@ public:
     void do_fall_in(Grid<int> & original_board, const Grid<int> & board_of_fallins);
 
     void set_vector_transform(TransformVectorFunc f) { m_transf_v = f; }
+    void set_render_blocks_merged_enabled(bool b) { m_render_merged = b; }
 
     static void do_tests();
     static VectorI identity_func(VectorI r) { return r; }
@@ -48,6 +49,7 @@ private:
     Grid<int> m_blocks_copy;
     const sf::Texture * m_texture = nullptr;
     TransformVectorFunc m_transf_v = identity_func;
+    bool m_render_merged = true;
 };
 
 // ----------------------------------------------------------------------------

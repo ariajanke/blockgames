@@ -86,8 +86,14 @@ void make_tetris_rows_fall(SubGrid<int> blocks, FallBlockEffects & effects) {
             ++cleared_rows;
         } else if (cleared_rows > 0) {
             for (int x = 0; x != blocks.width(); ++x) {
+                if (!is_block_color(blocks(x, y))) continue;
                 effects.post_block_fall(VectorI(x, y), VectorI(x, y + cleared_rows), blocks(x, y));
                 std::swap(blocks(x, y), blocks(x, y + cleared_rows));
+            }
+        } else {
+            for (int x = 0; x != blocks.width(); ++x) {
+                if (!is_block_color(blocks(x, y))) continue;
+                effects.post_stationary_block(VectorI(x, y), blocks(x, y));
             }
         }
     }
