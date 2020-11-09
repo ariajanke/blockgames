@@ -102,6 +102,7 @@ void PuyoState::update_fall_effects(double et) {
         m_update_func = &PuyoState::update_pop_effects;
     } else {
         // after pop
+        m_score += m_pef.get_score_delta_and_reset_wave_number();
         handle_response(m_current_scenario->on_turn_change());
     }
 }
@@ -220,6 +221,20 @@ void PuyoState::process_event(const sf::Event & event) {
 
     draw_block(m_next_piece.first , VectorI(m_blocks.width(), 1)*k_block_size);
     draw_block(m_next_piece.second, VectorI(m_blocks.width(), 0)*k_block_size);
+
+    brush.setTextureRect(texture_rect_for_score());
+    brush.setColor(sf::Color::White);
+    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 2)*k_block_size));
+    target.draw(brush);
+
+    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 3)*k_block_size));
+    {
+    for (char c : std::to_string(m_score)) {
+        brush.setTextureRect(texture_rect_for_char(c));
+        target.draw(brush);
+        brush.move(float(texture_rect_for_char(c).width), 0.f);
+    }
+    }
 }
 
 namespace {

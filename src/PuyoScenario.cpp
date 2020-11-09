@@ -36,6 +36,21 @@ class ForeverPop final : public NonSequentialScenario {
     Rng m_rng;
 };
 
+class PracticeMode final : public NonSequentialScenario {
+    void setup(Params &) override {}
+
+    Response on_turn_change() override {
+        return Response(k_random_pair);
+    }
+    const char * name() const override { return "Regular Practice"; }
+    const char * description() const override {
+        return "The regualar free play practice mode. No glass blocks, no bells "
+               "and wistles, just the simple game.";
+    }
+
+    ScenarioPtr clone() const override { return make_scenario<PracticeMode>(); }
+};
+
 class GlassWaves final : public NonSequentialScenario {
 public:
     void setup(Params &) override;
@@ -81,6 +96,7 @@ void Scenario::assign_board(Grid<int> & grid)
 /* static */ std::vector<ScenarioPtr> Scenario::make_all_scenarios() {
     std::vector<ScenarioPtr> rv;
     rv.emplace_back(make_pop_forever());
+    rv.emplace_back(make_scenario<PracticeMode>());
     rv.emplace_back(make_glass_waves());
     return verify_guarantees(std::move(rv));
 }
@@ -123,7 +139,9 @@ namespace {
 // ------------------------------ class divider -------------------------------
 
 /* private */ void GlassWaves::setup(Params & params) {
+#   if 0
     params.max_colors = 3;
+#   endif
     m_rng = Rng { std::random_device()() };
 }
 

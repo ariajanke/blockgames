@@ -26,6 +26,10 @@ sf::IntRect texture_rect_for(int);
 
 sf::IntRect texture_rect_for_background();
 
+sf::IntRect texture_rect_for_score();
+
+sf::IntRect texture_rect_for_char(char);
+
 sf::Color base_color_for_block(int);
 
 sf::Color brighten_color(sf::Color, double);

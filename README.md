@@ -21,3 +21,13 @@ Nondemonstrable (Stage 1/4)
 
 This will likely be moved over into the Demonstrable stage, pending presentational changes and the
 creation the "wip" branch.
+
+## Goals
+- 12 Scenarios for the Puyo derivative
+    * 3 non-sequential scenarios
+    * 1 special pop forever "screen saver"
+    * 8 sequential unlockable scenarios
+- 4 Scenarios for the Tetris derivative
+- Free Play Modes for the remaining two games
+- About/How to play dialog
+

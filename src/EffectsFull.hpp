@@ -115,8 +115,25 @@ class PuyoPopEffects final : public PopEffectsPartial {
 public:
     bool do_pop(Grid<int> & grid, int pop_requirement) {
         set_internal_grid_copy(grid);
+        ++m_wave_number;
         return pop_connected_blocks(grid, pop_requirement, *this);
     }
+
+    int get_score_delta_and_reset_wave_number() {
+        int rv = m_score_delta;
+        m_score_delta = m_wave_number = 0;
+        return rv;
+    }
+
+private:
+    void post_pop_effect(VectorI at, int color) override {
+        PopEffectsPartial::post_pop_effect(at, color);
+        if (!is_block_color(color)) return;
+        m_score_delta += m_wave_number;
+    }
+
+    int m_wave_number = 0;
+    int m_score_delta = 0;
 };
 
 // ----------------------------------------------------------------------------

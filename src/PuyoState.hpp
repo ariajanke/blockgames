@@ -62,4 +62,6 @@ private:
     bool m_is_paused = false;
 
     ScenarioPtr m_current_scenario;
+
+    int m_score = 0;
 };

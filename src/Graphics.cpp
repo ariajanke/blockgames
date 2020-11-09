@@ -19,6 +19,8 @@ using ColorGrid = Grid<sf::Color>;
 using ColorGroupInfo = std::tuple<sf::Color, VectorI>;
 
 constexpr const int k_color_group_size = 4;
+constexpr const int k_score_start_y = (k_color_group_size*2 + 2)*k_block_size;
+constexpr const int k_score_card_width = 16*3;
 
 const ColorGrid & builtin_blocks();
 sf::Color get_group_color_value(int color);
@@ -103,7 +105,7 @@ const sf::Texture & load_builtin_block_texture() {
 
     rv = std::make_unique<sf::Texture>();
     rv->loadFromImage(to_image(builtin_blocks()));
-    to_image(builtin_blocks()).saveToFile("/media/ramdisk/out.png");
+
     return *rv;
 }
 
@@ -128,6 +130,26 @@ sf::IntRect texture_rect_for(int n) {
 
 sf::IntRect texture_rect_for_background() {
     return sf::IntRect(0, (k_color_group_size*2 + 1)*k_block_size, k_block_size, k_block_size);
+}
+
+sf::IntRect texture_rect_for_score() {
+    return sf::IntRect(0, k_score_start_y, k_score_card_width, k_block_size);
+}
+
+sf::IntRect texture_rect_for_char(char c) {
+    static constexpr const int k_char_size = k_block_size / 2;
+    int x = k_score_card_width + [c]() {
+        static constexpr const int k_num_start = k_char_size*4;
+        if (c == '+') {
+            return 0;
+        } else if (c == '-') {
+            return k_char_size;
+        } else if (c >= '0' && c <= '9') {
+            return k_num_start + (c - '0')*k_char_size;
+        }
+        throw std::invalid_argument("texture_rect_for_char: character does not have a texture rectangle.");
+    } ();
+    return sf::IntRect(x, k_score_start_y, k_char_size, k_block_size);
 }
 
 sf::Color base_color_for_block(int n) {
@@ -171,6 +193,8 @@ void add_specials(SubGrid<sf::Color>);
 
 void add_builtin_background(SubGrid<sf::Color>);
 
+void add_builtin_score_numbers(SubGrid<sf::Color>);
+
 TileEdges get_edges_for(const ConstSubGrid<int> &, VectorI);
 
 const ColorGrid & builtin_blocks() {
@@ -180,7 +204,7 @@ const ColorGrid & builtin_blocks() {
     rv = std::make_unique<ColorGrid>();
     Grid<sf::Color> & grid = *rv;
     grid.set_size( k_color_group_size*3     *k_block_size,
-                  (k_color_group_size*2 + 2)*k_block_size, sf::Color::White);
+                  (k_color_group_size*2 + 3)*k_block_size, sf::Color::White);
     for (int color = k_min_colors; color != k_max_colors + 1; ++color) {
         auto [color_val, offset] = get_color_group_info(color);
         (void)color_val; // color added at draw time
@@ -197,9 +221,6 @@ const ColorGrid & builtin_blocks() {
                     block(r).r /= 3;
                     block(r).g /= 3;
                     block(r).b /= 3;
-                    //std::swap(block(r).r, block(r).g);
-                    //std::swap(block(r).g, block(r).b);
-                    //std::swap(block(r).b, block(r).r);
                     break;
                 default: break;
                 }
@@ -211,6 +232,8 @@ const ColorGrid & builtin_blocks() {
     add_builtin_background(make_sub_grid(grid,
         VectorI(0, (k_color_group_size*2 + 1)*k_block_size),
         k_block_size, k_block_size));
+    add_builtin_score_numbers(make_sub_grid(grid,
+        VectorI(0, k_score_start_y), SubGrid<int>::k_rest_of_grid, k_block_size));
     return *rv;
 }
 
@@ -356,9 +379,11 @@ void add_specials(SubGrid<sf::Color> grid) {
             }
         }
     }
+#   if 0
     add_builtin_background(grid.make_sub_grid(
         VectorI(k_specials_list.size()*k_block_size, 0), k_block_size, k_block_size
     ));
+#   endif
 }
 
 void add_builtin_background(SubGrid<sf::Color> subgrid) {
@@ -393,6 +418,126 @@ void add_builtin_background(SubGrid<sf::Color> subgrid) {
             default: throw ;
             }
         }(k_bricks[to_16x16_index(r)]);
+    }
+}
+
+void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
+    static constexpr int k_numbers_plus_minus_width = 16*2;
+    static constexpr const char * const k_numbers_plus_minus =
+       //                 1---------------
+       // 0123456789ABCDEF0123456789ABCDEF
+       """                                "// 0
+       """                                "// 1
+       """                                "// 2
+       """                                "// 3
+       """                                "// 4
+       """   XX                           "// 5
+       """   XX                           "// 6
+       """ XXXXXX  XXXXXX                 "// 7
+       """ XXXXXX  XXXXXX                 "// 8
+       """   XX                           "// 9
+       """   XX                           "// A
+       """                                "// B
+       """                                "// C
+       """                                "// D
+       """                                "// E
+       """                                "// F
+       ;
+    static constexpr int k_numbers_0_5_width = 16*4;
+    static constexpr const char * const k_numbers_0_5 =
+        //                 1---------------       2---------------3---------------
+        // 0123456789ABCDEF0123456789ABCDEF       0123456789ABCDEF0123456789ABCDEF
+        """                                "/*0*/"                                "
+        """   XXX      XX    XXXX    XXXX  "/*1*/" XX   XX XXXXXXX  XXXXX  XXXXXXX"
+        """  XXXXX    XXX   XX  XX  XX  XX "/*2*/" XX   XX XX XXXX XXX  XX XXXXXXX"
+        """ XX   XX  XX X   X    XX X    XX"/*3*/" XX   XX XX      XX    X XX   XX"
+        """ XX   XX     X        XX      XX"/*4*/" XX   XX XX      XX   XX X    XX"
+        """ XX   XX    XX      XXXX      XX"/*5*/" XX   XX XXXXXX  XX           XX"
+        """ XX   XX    XX     XXXX   XXXXXX"/*6*/"  XXXXX   XXXXXX XX          XX "
+        """ XX   XX    XX   XXX     XXXXXX "/*7*/"   XXXX       XX XX XXX      XX "
+        """ XX   XX    XX   XX          XXX"/*8*/"     XX       XX XXXX XX    XX  "
+        """ XX   XX    XX   XX           XX"/*9*/"     XX       XX XX   XX    XX  "
+        """ XX   XX    XX   XX      X    XX"/*A*/"     XX       XX XX   XX   XX   "
+        """  XXXXX    XXXX  XXXXX   XX  XX "/*B*/"     XX  XX XXXX XXXXXX    XX   "
+        """   XXX   XXXXXXX  XXXXX   XXXX  "/*C*/"     XX   XXXX    XXXXX    XX   "
+        """                                "/*D*/"                                "
+        """                                "/*E*/"                                "
+        """                                "/*F*/"                                "
+        ;
+    static constexpr int k_numbers_8_9_width = 16;
+    static constexpr const char * const k_numbers_8_9 =
+        // 0123456789ABCDEF
+        """                "// 0
+        """  XXXXX   XXXXX "// 1
+        """ XXX XXX XX   XX"// 2
+        """ XX   XX XX   XX"// 3
+        """ XX   XX XX   XX"// 4
+        """ XX  XXX XXX  XX"// 5
+        """  XXXXX   XXXXXX"// 6
+        """  XXXXX       XX"// 7
+        """ XXX  XX      XX"// 8
+        """ XX   XX     XX "// 9
+        """ XX   XX    XXX "// A
+        """ XXX XXX   XX   "// B
+        """  XXXXX   XX    "// C
+        """                "// D
+        """                "// E
+        """                "// F
+        ;
+
+    static constexpr const char * const k_score_card =
+        // Should read "SCORE"
+        //                 1---------------2---------------
+        // 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+        """                                                "// 0
+        """                                                "// 1
+        """     XXXX    XXXXX   XXXX    XXXXX   XXXXXX     "// 2
+        """    XXXX    XXXXX   XXXXXX   XXXXXX  XXXXX      "// 3
+        """   XX       XX     XX    XX  XX   XX XX         "// 4
+        """    XX      XX     XX    XX  XX   XX XX         "// 5
+        """     XXX    XX     XX    XX  XXXXXXX XXXXX      "// 6
+        """       XX   XX     XX    XX  XXXXXX  XXXXX      "// 7
+        """       XX   XX     XX    XX  XX   XX XX         "// 8
+        """       XX   XX     XX    XX  XX   XX XX         "// 9
+        """    XXXX    XXXXX   XXXXXX   XX   XX XXXXX      "// A
+        """   XXXX      XXXXX   XXXX    XX   XX XXXXXX     "// B
+        """                                                "// C
+        """   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX    "// D
+        """   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    "// E
+        """                                                "// F
+        ;
+    assert((strlen(k_score_card) / k_block_size) == k_score_card_width);
+
+    using std::make_pair;
+    static const auto k_graphic_list = {
+        make_pair(k_score_card_width        , k_score_card        ),
+        make_pair(k_numbers_plus_minus_width, k_numbers_plus_minus),
+        make_pair(k_numbers_0_5_width       , k_numbers_0_5       ),
+        make_pair(k_numbers_8_9_width       , k_numbers_8_9       )
+    };
+    static const int k_total_width = []() {
+        int rv = 0;
+        for (auto & p : k_graphic_list) rv += p.first;
+        return rv;
+    } ();
+    static auto char_to_color = [](char c) {
+        switch (c) {
+        case ' ': return sf::Color(0, 0, 0, 0);
+        case 'x': return sf::Color(200, 200, 200);
+        case 'X': return sf::Color::White;
+        default: throw std::invalid_argument("not a valid color character");
+        }
+    };
+    assert(subgrid.width() >= k_total_width);
+    VectorI offset;
+    for (auto [width, char_itr] : k_graphic_list) {
+        [[maybe_unused]] auto char_end = char_itr + strlen(char_itr);
+        auto target = make_sub_grid(subgrid, offset, width, k_block_size);
+        for (VectorI r; r != target.end_position(); r = target.next(r)) {
+            assert(char_itr != char_end);
+            target(r) = char_to_color(*char_itr++);
+        }
+        offset.x += width;
     }
 }
 
