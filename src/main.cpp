@@ -4,6 +4,7 @@
 #include "DialogState.hpp"
 #include "Settings.hpp"
 // #include "discord.h"
+// test edit for wip
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/Event.hpp>
