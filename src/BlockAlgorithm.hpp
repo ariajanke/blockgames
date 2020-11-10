@@ -23,6 +23,8 @@ void make_blocks_fall
 void make_tetris_rows_fall
     (SubGrid<int>, FallBlockEffects & = FallBlockEffects::default_instance());
 
+void make_all_blocks_fall_out(SubGrid<int>, FallBlockEffects &);
+
 class PopEffects {
 public:
     static PopEffects & default_instance();

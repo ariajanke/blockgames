@@ -1,5 +1,7 @@
 #include "Polyomino.hpp"
 
+#include <cassert>
+
 namespace {
 
 using Block = Polyomino::Block;
@@ -113,6 +115,9 @@ Polyomino to_polyomino(std::initializer_list<VectorI> &&);
         Vec(0, -1),
         Vec(0,  0), Vec(1,  0),
     });
+    Grid<int> g;
+    g.set_size(10, 20);
+    assert(!get_pm(Pe::l).obstructed_by(g));
     get_pm(Pe::n) = to_polyomino({
                     Vec(1, -2),
                     Vec(1, -1),
@@ -221,13 +226,37 @@ int Polyomino::block_color(int i) const
 VectorI Polyomino::block_location(int i) const
     { return m_blocks[std::size_t(i)].offset + m_location; }
 
+bool Polyomino::obstructed_by(const Grid<int> & grid) const {
+    for (const auto & block : m_blocks) {
+        auto r = block.offset + m_location;
+        if (!grid.has_position(r)) continue;
+        if (grid(r) != k_empty_block) return true;
+    }
+    return false;
+}
+
 /* private */ bool Polyomino::move
     (const Grid<int> & grid, VectorI & location, VectorI offset) const
 {
     // all block new locations must be cleared
+
+    // exception to movement behavior added:
+    // a polyomino may move if fewer blocks fall outside of the board
+
+    int old_inside_count = 0;
+    int new_inside_count = 0;
+    for (const auto & block : m_blocks) {
+        if (grid.has_position(location + block.offset         )) ++old_inside_count;
+        if (grid.has_position(location + block.offset + offset)) ++new_inside_count;
+    }
+
+    if (new_inside_count < old_inside_count) {
+        return false;
+    }
+
     for (const auto & block : m_blocks) {
         auto loc = location + offset + block.offset;
-        if (!grid.has_position(loc)) return false;
+        if (!grid.has_position(loc)) continue;
         if (grid(loc) != k_empty_block) return false;
     }
     location += offset;

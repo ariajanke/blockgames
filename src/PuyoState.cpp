@@ -8,8 +8,6 @@
 
 namespace {
 
-void all_blocks_fall_out(Grid<int> &, FallBlockEffects &);
-
 VectorI get_spawn_point(const Grid<int> &);
 
 } // end of <anonymous> namespace
@@ -69,7 +67,7 @@ void PuyoState::update_piece(double et) {
     if (!m_piece.descend(m_blocks)) {
         if (m_blocks(get_spawn_point(m_blocks)) != k_empty_block) {
             // on loss
-            all_blocks_fall_out(m_blocks, m_fef);
+            make_all_blocks_fall_out(m_blocks, m_fef);
             m_update_func = &PuyoState::update_fall_effects;
             return;
         }
@@ -238,16 +236,6 @@ void PuyoState::process_event(const sf::Event & event) {
 }
 
 namespace {
-
-void all_blocks_fall_out(Grid<int> & blocks, FallBlockEffects & effects) {
-    effects.start();
-    for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
-        if (blocks(r) == k_empty_block) continue;
-        effects.post_block_fall(r, VectorI(r.x, blocks.height()), blocks(r));
-        blocks(r) = k_empty_block;
-    }
-    effects.finish();
-}
 
 VectorI get_spawn_point(const Grid<int> & board) {
     auto w = board.width();

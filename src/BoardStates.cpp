@@ -84,7 +84,9 @@ using InvArg       = std::invalid_argument;
         m_fef.update(et);
     } else if ((m_fall_time += (et*m_fall_multiplier)) > m_fall_delay) {
         m_fall_time = 0.;
+        auto temp = m_piece;
         if (!m_piece.move_down(m_blocks)) {
+            temp.move_down(m_blocks);
             m_piece.place(m_blocks);
             reset_piece();
             clear_tetris_rows(m_blocks);
@@ -148,8 +150,12 @@ using InvArg       = std::invalid_argument;
     const auto & polys = m_available_polyominos;
     const auto & piece = polys[IntDistri(0, polys.size() - 1)(m_rng)];
     m_piece = piece;
-    m_piece.set_colors( 1 + ( (&piece - &polys.front()) % k_max_colors ) );
+    m_piece.set_colors(1 + ( (&piece - &polys.front()) % k_max_colors ) );
     m_piece.set_location(m_blocks.width() / 2, 0);
+
+    if (m_piece.obstructed_by(m_blocks)) {
+        make_all_blocks_fall_out(m_blocks, m_fef);
+    }
 }
 
 // ----------------------------------------------------------------------------

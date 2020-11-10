@@ -99,6 +99,16 @@ void make_tetris_rows_fall(SubGrid<int> blocks, FallBlockEffects & effects) {
     }
 }
 
+void make_all_blocks_fall_out(SubGrid<int> blocks, FallBlockEffects & effects) {
+    effects.start();
+    auto finisher = make_finisher(effects);
+    for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
+        if (blocks(r) == k_empty_block) continue;
+        effects.post_block_fall(r, VectorI(r.x, blocks.height()), blocks(r));
+        blocks(r) = k_empty_block;
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 /* static */ PopEffects & PopEffects::default_instance() {

@@ -50,6 +50,9 @@ public:
     int block_count() const;
     int block_color(int) const;
     VectorI block_location(int) const;
+
+    bool obstructed_by(const Grid<int> &) const;
+
 private:
     using RotateFunc = VectorI(*)(VectorI);
     bool move(const Grid<int> &, VectorI & location, VectorI offset) const;
@@ -62,13 +65,6 @@ private:
     VectorI m_location;
     bool m_rotation_enabled = true;
 };
-#if 0
-std::size_t to_index(Polyomino::Domino);
-std::size_t to_index(Polyomino::Tromino);
-std::size_t to_index(Polyomino::Tetromino);
-std::size_t to_index(Polyomino::Pentomino);
-std::size_t get_count(Polyomino::PolyominoSet);
-#endif
 
 using PolyominoEnabledSet = std::bitset<Polyomino::k_total_polyomino_count>;
 const char * to_string(Polyomino::PolyominoSet);
