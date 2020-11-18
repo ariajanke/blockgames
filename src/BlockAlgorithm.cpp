@@ -10,6 +10,8 @@ std::array<VectorI, 4> get_neighbor_positions_for(VectorI);
 
 void pop_special_neighbors(Grid<int> &, VectorI location, PopEffects &);
 
+Grid<bool> get_columns_popped_blocks(const Grid<int> &, int pop_requirement);
+
 [[nodiscard]] inline auto make_finisher(PopEffects & pop_effects) {
     struct FinisherRaii {
         FinisherRaii(PopEffects & effects_): effects(effects_) {}
@@ -189,45 +191,16 @@ bool pop_connected_blocks
 }
 
 bool pop_columns_blocks(Grid<int> & blocks, int pop_requirement, PopEffects & effects) {
-    struct IterGroup {
-        VectorI beg, step, sweep_step;
-    };
-
     effects.start();
     auto finisher = make_finisher(effects);
-
-    static const VectorI k_no_match(-1, -1);
-
-    bool any_popped = false;
-    static const auto k_scan_list = {
-        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI( 0,  1) },
-        IterGroup { VectorI(0, 0), VectorI(0, 1), VectorI( 1,  0) },
-        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI( 1,  1) },
-        IterGroup { VectorI(0, 0), VectorI(0, 1), VectorI( 1,  1) },
-        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI(-1,  1) },
-        IterGroup { VectorI(blocks.width() - 1, 0), VectorI(0, 1), VectorI(-1,  1) }
-    };
-    for (const auto & group : k_scan_list) {
-    for (auto r = group.beg; blocks.has_position(r); r += group.step) {
-        int count = 0;
-        for (auto t = r; blocks.has_position(t); t += group.sweep_step) {
-            if (blocks(t) == k_empty_block) {
-                if (count >= pop_requirement) {}
-                count = 0;
-            } else if (count == 0 && blocks(t) != k_empty_block) {
-                count = 1;
-            } else if (count && blocks(t) != blocks(t - count*group.sweep_step)) {
-                if (count >= pop_requirement) {}
-                count = 1;
-            } else if (count && blocks(t) == blocks(t - count*group.sweep_step)) {
-                ++count;
-            }
-        }
-        if (count >= pop_requirement) {
-
-        }
-    }}
-    return any_popped;
+    auto popped_blocks = get_columns_popped_blocks(blocks, pop_requirement);
+    assert(popped_blocks.size() == blocks.size());
+    for (VectorI i; i != blocks.end_position(); i = blocks.next(i)) {
+        if (!popped_blocks(i)) continue;
+        effects.post_pop_effect(i, blocks(i));
+        blocks(i) = k_empty_block;
+    }
+    return std::all_of(popped_blocks.begin(), popped_blocks.end(), [](bool b) { return b; });
 }
 
 int clear_tetris_rows(Grid<int> & blocks, PopEffects & effects) {
@@ -271,5 +244,51 @@ void pop_special_neighbors(Grid<int> & grid, VectorI location, PopEffects & effe
     }
 }
 
+Grid<bool> get_columns_popped_blocks(const Grid<int> & blocks, int pop_requirement) {
+    Grid<bool> rv;
+    rv.reserve(blocks.size());
+    rv.set_size(blocks.width(), blocks.height(), false);
+    struct IterGroup
+        { VectorI beg, step, sweep_step; };
+    const auto k_scan_list = {
+        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI( 0,  1) },
+        IterGroup { VectorI(0, 0), VectorI(0, 1), VectorI( 1,  0) },
+        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI( 1,  1) },
+        IterGroup { VectorI(0, 0), VectorI(0, 1), VectorI( 1,  1) },
+        IterGroup { VectorI(0, 0), VectorI(1, 0), VectorI(-1,  1) },
+        IterGroup { VectorI(blocks.width() - 1, 0), VectorI(0, 1), VectorI(-1,  1) }
+    };
+
+    for (const auto & group : k_scan_list) {
+    for (auto r = group.beg; blocks.has_position(r); r += group.step) {
+        int count = 0;
+        auto check_for_pop_reset_count =
+            [&count, &rv, pop_requirement](const IterGroup & group, VectorI end_pos)
+        {
+            if (count < pop_requirement) count = 0;
+            while(count) {
+                rv(end_pos - (count--)*group.sweep_step) = true;
+            }
+            assert(count == 0);
+        };
+        auto t = r;
+        for (; blocks.has_position(t); t += group.sweep_step) {
+            if (blocks(t) == k_empty_block) {
+                if (count == 0) continue; // do nothing
+                check_for_pop_reset_count(group, t);
+            } else {
+                if (count == 0) {
+                    count = 1; // start counting
+                } else if (blocks(t) == blocks(t - count*group.sweep_step)) {
+                    ++count; // keep counting
+                } else {
+                    check_for_pop_reset_count(group, t); // stop counting
+                }
+            }
+        }
+        check_for_pop_reset_count(group, t);
+    }}
+    return rv;
+}
 
 } // end of <anonymous> namespace

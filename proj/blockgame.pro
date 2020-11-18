@@ -9,7 +9,7 @@ LIBS           += -lsfml-graphics -lsfml-window -lsfml-system -lksg -lcommon-d \
                   -L$$PWD/../../ext/discord-sdk/lib/x86_64
 
 linux {
-    QMAKE_CXXFLAGS += -DMACRO_PLATFORM_LINUX
+    QMAKE_CXXFLAGS += -DMACRO_PLATFORM_LINUX -DMACRO_TEST_DRIVER_ENTRY_FUNCTION=enter_tests_driver
     contains(QT_ARCH, i386) {
         LIBS += -L../../bin/linux/g++-x86
     } else:contains(QT_ARCH, x86_64) {
@@ -44,6 +44,7 @@ SOURCES += \
     ../src/PuyoScenario.cpp \
     ../src/Settings.cpp \
     ../src/PuyoState.cpp \
+    ../unit-tests/test-driver.cpp \
     \ ##############################################################
     #../../ext/discord-sdk/cpp/core.cpp \
     #../../ext/discord-sdk/cpp/storage_manager.cpp \

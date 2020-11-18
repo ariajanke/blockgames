@@ -24,7 +24,6 @@ public:
     void set_vector_transform(TransformVectorFunc f) { m_transf_v = f; }
     void set_render_blocks_merged_enabled(bool b) { m_render_merged = b; }
 
-    static void do_tests();
     static VectorI identity_func(VectorI r) { return r; }
     static VectorI flip_xy(VectorI r) { return VectorI(r.y, r.x); }
 private:
