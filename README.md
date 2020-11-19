@@ -7,8 +7,6 @@ Games added so far are derived from these well known classics (links to Wikipedi
 - [Puyo Puyo](https://en.wikipedia.org/wiki/Puyo_Puyo)
 - [Tetris](https://en.wikipedia.org/wiki/Tetris)
 - [Same Game](https://en.wikipedia.org/wiki/SameGame)
-
-Soon a derivative of the following game will be added:
 - [Columns](https://en.wikipedia.org/wiki/Columns_(video_game))
 
 ## Other Features
@@ -19,8 +17,9 @@ can use "free play" settings.
 ## Current Development Stage
 Nondemonstrable (Stage 1/4)
 
-This will likely be moved over into the Demonstrable stage, pending presentational changes and the
-creation the "wip" branch.
+In order to reach the demonstrable stage, I need to add features such that a user can use/learn how to 
+use this application without "just knowing". This will involved changes to the README and include
+instructions presented in the app.
 
 ## Goals
 - 12 Scenarios for the Puyo derivative
@@ -31,3 +30,8 @@ creation the "wip" branch.
 - Free Play Modes for the remaining two games
 - About/How to play dialog
 
+### Additional goals as of 11-19
+- Re-assignable controls
+- Have configuration accessible to free play scenarios, in scenario select.
+    * each free play scenario has it's own configuration
+- Instructions presented in game(?)
