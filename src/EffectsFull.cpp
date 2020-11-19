@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "EffectsFull.hpp"
 
 #include <SFML/Graphics/Sprite.hpp>
@@ -105,82 +124,6 @@ void FallEffectsFull::do_fall_in
     finish();
 }
 
-/* static */ void FallEffectsFull::do_tests() {
-    assert(is_grid_the_same(make_grid({
-        { 1, 0, 0 },
-        { 1, 0, 0 },
-        { 1, 1, 1 },
-    }), {
-        { 1, 0, 0 },
-        { 1, 0, 0 },
-        { 1, 1, 1 },
-    }));
-    static const sf::Texture test_texture;
-    {
-    auto g = make_grid({
-        { 0, 0, 0 },
-        { 1, 0, 0 },
-        { 1, 1, 1 },
-    });
-    auto fallins = make_grid({
-        { 0, 0, 1 },
-        { 0, 1, 0 },
-        { 1, 0, 0 },
-    });
-    FallEffectsFull fef;
-    fef.setup(g.width(), g.height(), test_texture);
-    fef.do_fall_in(g, fallins);
-    assert(is_grid_the_same(g, {
-        { 1, 0, 0, },
-        { 1, 1, 1, },
-        { 1, 1, 1, },
-    }));
-    }
-    {
-    auto g = make_grid({
-        { 0, 0, 0 },
-        { 1, 0, 0 },
-        { 1, 0, 1 },
-    });
-    auto fallins = make_grid({
-        { 0, 0, 1 },
-        { 0, 1, 0 },
-        { 0, 0, 0 },
-    });
-    FallEffectsFull fef;
-    fef.setup(g.width(), g.height(), test_texture);
-    fef.do_fall_in(g, fallins);
-    assert(is_grid_the_same(g, {
-        { 0, 0, 0, },
-        { 1, 0, 1, },
-        { 1, 1, 1, },
-    }));
-    }
-    {
-    auto g = make_grid({
-        { 0, 0, 0 },
-        { 0, 0, 0 },
-        { 0, 0, 0 },
-        { 1, 0, 0 },
-    });
-    auto fallins = make_grid({
-        { 0, 0, 1 },
-        { 1, 1, 0 },
-        { 1, 1, 1 },
-        { 1, 1, 0 },
-    });
-    FallEffectsFull fef;
-    fef.setup(g.width(), g.height(), test_texture);
-    fef.do_fall_in(g, fallins);
-    assert(is_grid_the_same(g, {
-        { 1, 0, 0 },
-        { 1, 1, 0 },
-        { 1, 1, 1 },
-        { 1, 1, 1 },
-    }));
-    }
-}
-
 /* private */ void FallEffectsFull::start() {
     for (int & c : m_blocks_copy) c = k_empty_block;
 }
@@ -224,7 +167,7 @@ void FallEffectsFull::do_fall_in
         target.draw(brush, states);
     }
     brush.setPosition(0.f, 0.f);
-    render_merged_blocks(m_blocks_copy, brush, target);
+    (m_render_merged ? render_merged_blocks : render_blocks)(m_blocks_copy, brush, target);
 }
 
 // ----------------------------------------------------------------------------

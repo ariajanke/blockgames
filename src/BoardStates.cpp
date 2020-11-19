@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "BoardStates.hpp"
 #include "Graphics.hpp"
 #include "PuyoScenario.hpp"
@@ -29,7 +48,7 @@ using InvArg       = std::invalid_argument;
     setup_board(settings);
 }
 
-/* private */ void BoardState::set_max_colors(int n) {
+/* protected */ void BoardState::set_max_colors(int n) {
     if (n < k_min_colors || n > k_max_colors) {
         throw InvArg("BoardState::set_max_colors: max colors must be in [" +
                      std::to_string(k_min_colors) + " " +
@@ -74,15 +93,19 @@ using InvArg       = std::invalid_argument;
 
     reset_piece();
     m_fef.setup(conf.width, conf.height, load_builtin_block_texture());
+    m_fef.set_render_blocks_merged_enabled(false);
     set_max_colors(conf.colors);
 }
 
 /* private */ void TetrisState::update(double et) {
+    if (m_pause) return;
     if (m_fef.has_effects()) {
         m_fef.update(et);
     } else if ((m_fall_time += (et*m_fall_multiplier)) > m_fall_delay) {
         m_fall_time = 0.;
+        auto temp = m_piece;
         if (!m_piece.move_down(m_blocks)) {
+            temp.move_down(m_blocks);
             m_piece.place(m_blocks);
             reset_piece();
             clear_tetris_rows(m_blocks);
@@ -99,20 +122,23 @@ using InvArg       = std::invalid_argument;
         }
     } else if (event.type == sf::Event::KeyReleased) {
         switch (event.key.code) {
+        case sf::Keyboard::Return:
+            m_pause = !m_pause;
+            break;
         case sf::Keyboard::A:
-            m_piece.rotate_left(m_blocks);
+            if (!m_pause) m_piece.rotate_left(m_blocks);
             break;
         case sf::Keyboard::S:
-            m_piece.rotate_right(m_blocks);
+            if (!m_pause) m_piece.rotate_right(m_blocks);
             break;
         case sf::Keyboard::Down:
             m_fall_multiplier = 1.;
             break;
         case sf::Keyboard::Left:
-            m_piece.move_left(m_blocks);
+            if (!m_pause) m_piece.move_left(m_blocks);
             break;
         case sf::Keyboard::Right:
-            m_piece.move_right(m_blocks);
+            if (!m_pause) m_piece.move_right(m_blocks);
             break;
         default: break;
         }
@@ -143,8 +169,12 @@ using InvArg       = std::invalid_argument;
     const auto & polys = m_available_polyominos;
     const auto & piece = polys[IntDistri(0, polys.size() - 1)(m_rng)];
     m_piece = piece;
-    m_piece.set_colors( 1 + ( (&piece - &polys.front()) % k_max_colors ) );
+    m_piece.set_colors(1 + ( (&piece - &polys.front()) % k_max_colors ) );
     m_piece.set_location(m_blocks.width() / 2, 0);
+
+    if (m_piece.obstructed_by(m_blocks)) {
+        make_all_blocks_fall_out(m_blocks, m_fef);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -245,7 +275,9 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
 }
 
 /* private */ void SameGame::draw(sf::RenderTarget & target, sf::RenderStates states) const {
-    draw_fill_with_background(target, m_blocks.width(), m_blocks.height());
+    draw_fill_with_background(target,
+        m_blocks.is_empty() ? m_sweep_temp.height() : m_blocks.width (),
+        m_blocks.is_empty() ? m_sweep_temp.width () : m_blocks.height());
 
     DrawRectangle drect;
     drect.set_size(k_block_size, k_block_size);

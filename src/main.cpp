@@ -19,10 +19,6 @@ namespace {
 
 using SettingsPtr = AppState::SettingsPtr;
 
-void do_tests();
-
-inline void assert_(bool b) { assert(b); }
-
 sf::Vector2i center_screen(const AppState &);
 
 class WindowAnchor {
@@ -43,13 +39,19 @@ void save_icon_to_file(ProgramOptions &, char ** beg, char ** end);
 
 } // end of <anonymous> namespace
 
+#ifdef MACRO_TEST_DRIVER_ENTRY_FUNCTION
+    int MACRO_TEST_DRIVER_ENTRY_FUNCTION();
+#endif
+
 int main(int argc, char ** argv) {
     parse_options<ProgramOptions>(argc, argv, {
         { "save-builtin", 'b', parse_save_builtin_to_file_system },
         { "save-icon"   , 'i', save_icon_to_file                 }
     });
-    FallEffectsFull::do_tests();
-    do_tests();
+
+#   ifdef MACRO_TEST_DRIVER_ENTRY_FUNCTION
+    assert(MACRO_TEST_DRIVER_ENTRY_FUNCTION() == 0);
+#   endif
 
     std::unique_ptr<AppState> app_state = std::make_unique<DialogState>();
     SettingsPtr settings_ptr;
@@ -110,116 +112,6 @@ int main(int argc, char ** argv) {
 }
 
 namespace {
-
-void do_tests() {
-    assert(GetEdgeValue<>::k_value == TileEdges().to_ulong());
-    assert(GetEdgeValue<k_left_edge>::k_value == TileEdges().set(k_left_edge).to_ulong());
-    assert(GetEdgeValue<k_right_edge>::k_value == TileEdges().set(k_right_edge).to_ulong());
-    assert(GetEdgeValue<k_bottom_edge>::k_value == TileEdges().set(k_bottom_edge).to_ulong());
-    assert(GetEdgeValue<k_top_edge>::k_value == TileEdges().set(k_top_edge).to_ulong());
-    assert_(GetEdgeValue<k_right_edge, k_left_edge>::k_value == TileEdges().set(k_right_edge).set(k_left_edge).to_ulong());
-
-    assert_(GetEdgeValue<k_right_edge, k_bottom_edge>::k_value == TileEdges().set(k_right_edge).set(k_bottom_edge).to_ulong());
-    assert_(GetEdgeValue<k_right_edge, k_top_edge>::k_value == TileEdges().set(k_right_edge).set(k_top_edge).to_ulong());
-    assert_(GetEdgeValue<k_left_edge, k_top_edge>::k_value == TileEdges().set(k_left_edge).set(k_top_edge).to_ulong());
-    assert_(GetEdgeValue<k_left_edge, k_bottom_edge>::k_value == TileEdges().set(k_left_edge).set(k_bottom_edge).to_ulong());
-    assert_(GetEdgeValue<k_top_edge, k_bottom_edge>::k_value == TileEdges().set(k_top_edge).set(k_bottom_edge).to_ulong());
-
-
-    assert_(GetEdgeValue<k_top_edge, k_bottom_edge, k_left_edge>::k_value == TileEdges().set(k_top_edge).set(k_bottom_edge).set(k_left_edge).to_ulong());
-    assert_(GetEdgeValue<k_top_edge, k_bottom_edge, k_right_edge>::k_value == TileEdges().set(k_top_edge).set(k_bottom_edge).set(k_right_edge).to_ulong());
-    assert_(GetEdgeValue<k_bottom_edge, k_right_edge, k_left_edge>::k_value == TileEdges().set(k_bottom_edge).set(k_right_edge).set(k_left_edge).to_ulong());
-    assert_(GetEdgeValue<k_top_edge, k_right_edge, k_left_edge>::k_value == TileEdges().set(k_top_edge).set(k_right_edge).set(k_left_edge).to_ulong());
-
-    assert(GetEdgeValue<k_left_edge>::k_value == TileEdges().set(k_left_edge).to_ulong());
-
-    {
-    auto g = make_grid({
-       { 0, 1, 2 },
-       { 3, 4, 5 },
-       { 6, 7, 8 },
-    });
-    assert(g(0, 0) == 0);
-    assert(g(1, 0) == 1);
-    assert(g(2, 0) == 2);
-
-    assert(g(0, 1) == 3);
-    assert(g(1, 1) == 4);
-    assert(g(2, 1) == 5);
-
-    assert(g(0, 2) == 6);
-    assert(g(1, 2) == 7);
-    assert(g(2, 2) == 8);
-    }
-    {
-    auto g = make_grid({
-        { 0, 1 },
-        { 2, 3 },
-        { 4, 5 }
-    });
-
-    assert(g(0, 0) == 0);
-    assert(g(1, 0) == 1);
-
-    assert(g(0, 1) == 2);
-    assert(g(1, 1) == 3);
-
-    assert(g(0, 2) == 4);
-    assert(g(1, 2) == 5);
-    }
-    {
-    auto g = make_grid({
-       { 0, 1, 0 },
-       { 1, 1, 1 },
-       { 0, 1, 0 }
-    });
-    Grid<bool> explored;
-    explored.set_size(g.width(), g.height());
-    std::vector<VectorI> selections = { VectorI(1, 1) };
-    select_connected_blocks(g, selections, explored);
-    assert(selections.size() == 5);
-    }
-    {
-    auto g = make_grid({
-       { 1, 0, 1 },
-       { 1, 1, 1 },
-       { 1, 0, 1 }
-    });
-    Grid<bool> explored;
-    explored.set_size(g.width(), g.height());
-    std::vector<VectorI> selections = { VectorI(0, 0) };
-    select_connected_blocks(g, selections, explored);
-    assert(selections.size() == 7);
-    }
-    {
-    auto g = make_grid({
-       { 0, 0, 2, 0 },
-       { 0, 1, 1, 0 },
-       { 0, 1, 1, 2 },
-       { 0, 0, 0, 0 }
-    });
-    Grid<bool> explored;
-    explored.set_size(g.width(), g.height());
-    std::vector<VectorI> selections = { VectorI(1, 1) };
-    select_connected_blocks(g, selections, explored);
-    assert(selections.size() == 4);
-    }
-    {
-    auto g = make_grid({
-        { 0 },
-        { 1 },
-        { 0 },
-        { 1 },
-        { 1 },
-    });
-    make_blocks_fall(g);
-    assert(g(0, 0) == 0);
-    assert(g(0, 1) == 0);
-    assert(g(0, 2) == 1);
-    assert(g(0, 3) == 1);
-    assert(g(0, 4) == 1);
-    }
-}
 
 sf::Vector2i center_screen(const AppState & app_state) {
     auto screen_nfo = sf::VideoMode::getDesktopMode();

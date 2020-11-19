@@ -1,4 +1,25 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "Polyomino.hpp"
+
+#include <cassert>
 
 namespace {
 
@@ -71,7 +92,7 @@ Polyomino to_polyomino(std::initializer_list<VectorI> &&);
     rv[static_cast<int>(Tetromino::o)].disable_rotation();
     // S-Block
     rv[static_cast<int>(Tetromino::s)] = to_polyomino({
-                     Vec(0,  1), Vec(1,  1),
+                     Vec(0, -1), Vec(1, -1),
         Vec(-1,  0), Vec(0,  0),
     });
     // T-Block
@@ -113,6 +134,9 @@ Polyomino to_polyomino(std::initializer_list<VectorI> &&);
         Vec(0, -1),
         Vec(0,  0), Vec(1,  0),
     });
+    Grid<int> g;
+    g.set_size(10, 20);
+    assert(!get_pm(Pe::l).obstructed_by(g));
     get_pm(Pe::n) = to_polyomino({
                     Vec(1, -2),
                     Vec(1, -1),
@@ -221,13 +245,37 @@ int Polyomino::block_color(int i) const
 VectorI Polyomino::block_location(int i) const
     { return m_blocks[std::size_t(i)].offset + m_location; }
 
+bool Polyomino::obstructed_by(const Grid<int> & grid) const {
+    for (const auto & block : m_blocks) {
+        auto r = block.offset + m_location;
+        if (!grid.has_position(r)) continue;
+        if (grid(r) != k_empty_block) return true;
+    }
+    return false;
+}
+
 /* private */ bool Polyomino::move
     (const Grid<int> & grid, VectorI & location, VectorI offset) const
 {
     // all block new locations must be cleared
+
+    // exception to movement behavior added:
+    // a polyomino may move if fewer blocks fall outside of the board
+
+    int old_inside_count = 0;
+    int new_inside_count = 0;
+    for (const auto & block : m_blocks) {
+        if (grid.has_position(location + block.offset         )) ++old_inside_count;
+        if (grid.has_position(location + block.offset + offset)) ++new_inside_count;
+    }
+
+    if (new_inside_count < old_inside_count) {
+        return false;
+    }
+
     for (const auto & block : m_blocks) {
         auto loc = location + offset + block.offset;
-        if (!grid.has_position(loc)) return false;
+        if (!grid.has_position(loc)) continue;
         if (grid(loc) != k_empty_block) return false;
     }
     location += offset;

@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "Defs.hpp"
 
 #include <stdexcept>
@@ -9,27 +28,7 @@ namespace {
 bool has_consistent_width(std::initializer_list<std::initializer_list<int>>);
 
 } // end of <anonymous> namespace
-#if 0
-sf::Color to_sfcolor(int color) {
-    switch (color) {
-    case k_empty_block:
-        throw std::invalid_argument("to_sfcolor: Empty block has no color");
-    case 1: return sf::Color(230,  70,  70);
-    case 2: return sf::Color( 70, 230,  70);
-    case 3: return sf::Color( 70,  70, 230);
-    case 4: return sf::Color(230, 230,  70);
-    case 5: return sf::Color(230,  70, 230);
-    }
-    throw std::invalid_argument("to_sfcolor: invalid color");
-}
 
-sf::IntRect texture_rect_for(TileEdges edges) {
-    auto val = edges.to_ulong();
-    VectorI u(val % 4, val / 4);
-    return sf::IntRect(u.x*k_block_size, u.y*k_block_size,
-                       k_block_size, k_block_size);
-}
-#endif
 Grid<int> make_grid
     (std::initializer_list<std::initializer_list<int>> list)
 {

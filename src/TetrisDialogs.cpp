@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "TetrisDialogs.hpp"
 #include "Graphics.hpp"
 #include "DialogState.hpp"
@@ -42,7 +61,7 @@ void PolyominoButton::draw(sf::RenderTarget & target, sf::RenderStates states) c
         - VectorF(1.f, 1.f)*float(k_block_size)*0.5f;
     brush.setTexture(load_builtin_block_texture());
     brush.setTextureRect(texture_rect_for(1));
-    brush.setColor(m_on ? sf::Color::White : sf::Color(200, 200, 200));
+    brush.setColor(m_on ? base_color_for_block(1) : sf::Color(100, 100, 100));
     brush.scale(float(m_scale), float(m_scale));
     sf::FloatRect bounds(location(), sf::Vector2f(width(), height()));
     for (int i = 0; i != m_polyomino.block_count(); ++i) {

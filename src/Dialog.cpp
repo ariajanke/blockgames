@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "Dialog.hpp"
 
 #include "AppState.hpp"
@@ -5,6 +24,7 @@
 #include "PuyoState.hpp"
 #include "PuyoDialogs.hpp"
 #include "TetrisDialogs.hpp"
+#include "ColumnsClone.hpp"
 
 #include <ksg/TextArea.hpp>
 #include <ksg/TextButton.hpp>
@@ -65,6 +85,7 @@ const char * game_name(GameSelection sel) {
     case Game::puyo_clone    : return "Puyo Puyo Clone";
     case Game::tetris_clone  : return "Tetris Clone";
     case Game::samegame_clone: return "Same Game Clone";
+    case Game::columns_clone : return "Columns Clone";
     default: throw std::invalid_argument("game_name: selection is not a game");
     }
 }
@@ -245,9 +266,10 @@ void GameSelectionDialog::setup_() {
     m_freeplay.set_press_event([this]() {
         set_next_state([this]() -> std::unique_ptr<AppState> {
             switch (to_game_selection(m_game_slider.selected_option_index())) {
-            case Game::puyo_clone    : return std::make_unique<PuyoState >();
-            case Game::samegame_clone: return std::make_unique<SameGame   >();
-            case Game::tetris_clone  : return std::make_unique<TetrisState>();
+            case Game::puyo_clone    : return std::make_unique<PuyoState   >();
+            case Game::samegame_clone: return std::make_unique<SameGame    >();
+            case Game::tetris_clone  : return std::make_unique<TetrisState >();
+            case Game::columns_clone : return std::make_unique<ColumnsState>();
             default: throw std::runtime_error("Options slider on invalid game.");
             }
         }());
@@ -262,9 +284,10 @@ void GameSelectionDialog::setup_() {
 
     m_settings.set_press_event([this]() {        
         switch (to_game_selection(m_game_slider.selected_option_index())) {
-        case Game::puyo_clone  : set_next_state(make_dialog<PuyoDialog>()); break;
-        case Game::tetris_clone: set_next_state(make_dialog<PolyominoSelectDialog>()); break;
-        case Game::samegame_clone: set_next_state(make_dialog<SameGameDialog>()); break;
+        case Game::puyo_clone    : set_next_state(make_dialog<PuyoDialog           >()); break;
+        case Game::tetris_clone  : set_next_state(make_dialog<PolyominoSelectDialog>()); break;
+        case Game::samegame_clone: set_next_state(make_dialog<SameGameDialog       >()); break;
+        case Game::columns_clone : set_next_state(make_dialog<ColumnsSettingsDialog>()); break;
         default: break;
         }
     });

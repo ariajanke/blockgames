@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "PuyoState.hpp"
 #include "PuyoScenario.hpp"
 
@@ -7,8 +26,6 @@
 #include <cassert>
 
 namespace {
-
-void all_blocks_fall_out(Grid<int> &, FallBlockEffects &);
 
 VectorI get_spawn_point(const Grid<int> &);
 
@@ -69,7 +86,7 @@ void PuyoState::update_piece(double et) {
     if (!m_piece.descend(m_blocks)) {
         if (m_blocks(get_spawn_point(m_blocks)) != k_empty_block) {
             // on loss
-            all_blocks_fall_out(m_blocks, m_fef);
+            make_all_blocks_fall_out(m_blocks, m_fef);
             m_update_func = &PuyoState::update_fall_effects;
             return;
         }
@@ -238,16 +255,6 @@ void PuyoState::process_event(const sf::Event & event) {
 }
 
 namespace {
-
-void all_blocks_fall_out(Grid<int> & blocks, FallBlockEffects & effects) {
-    effects.start();
-    for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
-        if (blocks(r) == k_empty_block) continue;
-        effects.post_block_fall(r, VectorI(r.x, blocks.height()), blocks(r));
-        blocks(r) = k_empty_block;
-    }
-    effects.finish();
-}
 
 VectorI get_spawn_point(const Grid<int> & board) {
     auto w = board.width();
