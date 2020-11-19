@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "BoardStates.hpp"
 #include "Graphics.hpp"
 #include "PuyoScenario.hpp"
@@ -29,7 +48,7 @@ using InvArg       = std::invalid_argument;
     setup_board(settings);
 }
 
-/* private */ void BoardState::set_max_colors(int n) {
+/* protected */ void BoardState::set_max_colors(int n) {
     if (n < k_min_colors || n > k_max_colors) {
         throw InvArg("BoardState::set_max_colors: max colors must be in [" +
                      std::to_string(k_min_colors) + " " +

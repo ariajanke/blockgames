@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #pragma once
 
 #include <bitset>
@@ -13,7 +32,10 @@
 using VectorI = sf::Vector2i;
 using VectorD = sf::Vector2<double>;
 
-enum class GameSelection { puyo_clone, tetris_clone, samegame_clone, count };
+enum class GameSelection {
+    puyo_clone, tetris_clone, samegame_clone, columns_clone,
+    count
+};
 
 enum TileEdge {
     k_left_edge, k_right_edge, k_top_edge, k_bottom_edge,
@@ -36,7 +58,7 @@ struct GetEdgeValue<edge, Types...> : public GetEdgeValue<Types...> {
 
 [[maybe_unused]] const constexpr auto k_game_list = {
     GameSelection::puyo_clone, GameSelection::tetris_clone,
-    GameSelection::samegame_clone
+    GameSelection::samegame_clone, GameSelection::columns_clone
 };
 
 [[maybe_unused]] constexpr const int k_block_size         = 16;
@@ -55,6 +77,7 @@ struct GetEdgeValue<edge, Types...> : public GetEdgeValue<Types...> {
 [[maybe_unused]] constexpr const int k_free_play_scenario = -1;
 
 enum class Block {
+    empty,
     red, blue, green, magenta, yellow,
     glass, hard_glass,
 };

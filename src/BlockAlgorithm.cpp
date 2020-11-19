@@ -1,3 +1,22 @@
+/****************************************************************************
+
+    Copyright 2020 Aria Janke
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+*****************************************************************************/
+
 #include "BlockAlgorithm.hpp"
 
 #include <array>
@@ -200,7 +219,7 @@ bool pop_columns_blocks(Grid<int> & blocks, int pop_requirement, PopEffects & ef
         effects.post_pop_effect(i, blocks(i));
         blocks(i) = k_empty_block;
     }
-    return std::all_of(popped_blocks.begin(), popped_blocks.end(), [](bool b) { return b; });
+    return std::any_of(popped_blocks.begin(), popped_blocks.end(), [](bool b) { return b; });
 }
 
 int clear_tetris_rows(Grid<int> & blocks, PopEffects & effects) {
