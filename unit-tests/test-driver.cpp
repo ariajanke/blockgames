@@ -20,6 +20,7 @@
 #include "../src/Defs.hpp"
 #include "../src/BlockAlgorithm.hpp"
 #include "../src/EffectsFull.hpp"
+#include "../src/ColumnsClone.hpp"
 
 #include <common/TestSuite.hpp>
 
@@ -40,6 +41,7 @@ bool test_select_connected_blocks(ts::TestSuite &);
 bool test_make_blocks_fall(ts::TestSuite &);
 bool test_FallEffectsFull_do_fall_in(ts::TestSuite &);
 bool test_columns_algo(ts::TestSuite &);
+bool test_columns_rotate(ts::TestSuite &);
 
 } // end of <anonymous> namespace
 
@@ -47,7 +49,7 @@ int MACRO_TEST_DRIVER_ENTRY_FUNCTION() {
     ts::TestSuite suite;
     auto test_fns = {
         test_GetEdgeValue, test_select_connected_blocks, test_make_blocks_fall,
-        test_FallEffectsFull_do_fall_in, test_columns_algo
+        test_FallEffectsFull_do_fall_in, test_columns_algo, test_columns_rotate
     };
     bool all_good = true;
     for (auto f : test_fns) {
@@ -317,6 +319,17 @@ bool test_columns_algo(ts::TestSuite & suite) {
     suite.test([]() {
         return ts::test(compare_test_to_cor(
             make_grid({
+                { 0, 0, 0, 2 },
+                { 3, 1, 1, 1 },
+            }), make_grid({
+                { 0, 0, 0, 2 },
+                { 3, 0, 0, 0 },
+            })
+        ));
+    });
+    suite.test([]() {
+        return ts::test(compare_test_to_cor(
+            make_grid({
                 { 1, 1, 1, 2 }
             }), make_grid({
                 { 0, 0, 0, 2 }
@@ -353,19 +366,43 @@ bool test_columns_algo(ts::TestSuite & suite) {
         auto g = make_grid({
             { 1, 1, 1, 2, 2, 3, 1 },
             { 2, 1, 3, 2, 3, 1, 2 },
-            { 4, 1, 4, 4, 1, 3, 3 },
+            { 4, 1, 4, 4, 1, 4, 3 },
             { 1, 1, 4, 3, 2, 1, 3 },
             { 4, 3, 4, 3, 2, 3, 1 }
         });
         auto cor = make_grid({
             { 0, 0, 0, 2, 2, 3, 0 },
             { 2, 0, 3, 2, 3, 0, 2 },
-            { 4, 0, 0, 4, 0, 3, 3 },
+            { 4, 0, 0, 4, 0, 4, 3 },
             { 1, 0, 0, 3, 2, 0, 3 },
             { 4, 3, 0, 3, 2, 3, 0 }
         });
         return ts::test(compare_test_to_cor(g, cor));
     });
+    return suite.has_successes_only();
+}
+
+bool test_columns_rotate(ts::TestSuite & suite) {
+    suite.start_series("ColumnsPiece::rotate");
+    suite.test([]() {
+        ColumnsPiece p(1, 2, 3);
+        // bottom comes first assumed
+        assert(p.as_blocks()[0].second == 1 && p.as_blocks()[2].second == 3);
+        p.rotate_down();
+        auto blocks = p.as_blocks();
+        return ts::test(   blocks[2].second == 1
+                        && blocks[1].second == 3
+                        && blocks[0].second == 2);
+    });
+    suite.test([]() {
+        ColumnsPiece p(1, 2, 3);
+        p.rotate_up();
+        auto blocks = p.as_blocks();
+        return ts::test(   blocks[2].second == 2
+                        && blocks[1].second == 1
+                        && blocks[0].second == 3);
+    });
+
     return suite.has_successes_only();
 }
 

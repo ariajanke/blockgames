@@ -92,5 +92,6 @@ class ColumnsState final : public BoardState {
 class ColumnsSettingsDialog final : public Dialog {
     void setup_() override;
 
+    ksg::TextArea m_unimplemented;
     ksg::TextButton m_back_to_main;
 };

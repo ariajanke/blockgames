@@ -104,9 +104,11 @@ VectorI ColumnsPiece::bottom() const
 /* private */ void ColumnsPiece::rotate(int direction) {
     if (direction == 0) return;
     direction /= magnitude(direction);
+    decltype(m_blocks) t;
     for (int i = 0; i != k_piece_size; ++i) {
-        std::swap(m_blocks[i], m_blocks[wrap_index(m_blocks, i + direction)]);
+        t[wrap_index(t, i - direction)] = m_blocks[i];
     }
+    m_blocks = t;
 
     check_invarients();
 }
@@ -258,10 +260,13 @@ VectorI ColumnsPiece::bottom() const
 
 /* private */ void ColumnsSettingsDialog::setup_() {
     m_back_to_main.set_string(U"Back to Menu");
+    m_unimplemented.set_string(U"This is still unimplemented.\n"
+                               "For now this game uses settings from the Puyo derivative.");
     m_back_to_main.set_press_event([this]() {
         set_next_state(make_top_level_dialog(GameSelection::columns_clone));
     });
     begin_adding_widgets(get_styles())
+        .add(m_unimplemented).add_line_seperator()
         .add(m_back_to_main);
 }
 

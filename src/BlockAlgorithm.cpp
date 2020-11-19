@@ -302,6 +302,7 @@ Grid<bool> get_columns_popped_blocks(const Grid<int> & blocks, int pop_requireme
                     ++count; // keep counting
                 } else {
                     check_for_pop_reset_count(group, t); // stop counting
+                    count = blocks(t) != k_empty_block ? 1 : 0;
                 }
             }
         }
