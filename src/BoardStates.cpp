@@ -26,6 +26,8 @@
 #include <SFML/Graphics/RenderTarget.hpp>
 
 #include <functional>
+#include <variant>
+#include <unordered_set>
 
 #include <cassert>
 
@@ -42,6 +44,11 @@ using InvArg       = std::invalid_argument;
             set_next_state(std::make_unique<DialogState>());
         }
     }
+    m_pc_handler.update(event);
+}
+
+/* protected */ void BoardState::update(double) {
+    m_pc_handler.send_events(*this);
 }
 
 /* private */ void BoardState::setup_(Settings & settings) {
@@ -98,10 +105,11 @@ using InvArg       = std::invalid_argument;
 }
 
 /* private */ void TetrisState::update(double et) {
-    if (m_pause) return;
+    PauseableWithFallingPieceState::update(et);
+    if (is_paused()) return;
     if (m_fef.has_effects()) {
         m_fef.update(et);
-    } else if ((m_fall_time += (et*m_fall_multiplier)) > m_fall_delay) {
+    } else if ((m_fall_time += (et*fall_multiplier())) > m_fall_delay) {
         m_fall_time = 0.;
         auto temp = m_piece;
         if (!m_piece.move_down(m_blocks)) {
@@ -110,37 +118,6 @@ using InvArg       = std::invalid_argument;
             reset_piece();
             clear_tetris_rows(m_blocks);
             make_tetris_rows_fall(m_blocks, m_fef);
-        }
-    }
-}
-
-/* private */ void TetrisState::process_event(const sf::Event & event) {
-    BoardState::process_event(event);
-    if (event.type == sf::Event::KeyPressed) {
-        if (event.key.code == sf::Keyboard::Down) {
-            m_fall_multiplier = 10.;
-        }
-    } else if (event.type == sf::Event::KeyReleased) {
-        switch (event.key.code) {
-        case sf::Keyboard::Return:
-            m_pause = !m_pause;
-            break;
-        case sf::Keyboard::A:
-            if (!m_pause) m_piece.rotate_left(m_blocks);
-            break;
-        case sf::Keyboard::S:
-            if (!m_pause) m_piece.rotate_right(m_blocks);
-            break;
-        case sf::Keyboard::Down:
-            m_fall_multiplier = 1.;
-            break;
-        case sf::Keyboard::Left:
-            if (!m_pause) m_piece.move_left(m_blocks);
-            break;
-        case sf::Keyboard::Right:
-            if (!m_pause) m_piece.move_right(m_blocks);
-            break;
-        default: break;
         }
     }
 }
@@ -198,6 +175,7 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
 }
 
 /* private */ void SameGame::update(double et) {
+    BoardState::update(et);
     if (m_pop_ef.has_effects()) {
         m_pop_ef.update(et);
         if (!m_pop_ef.has_effects()) {
@@ -235,42 +213,42 @@ void flip_along_trace(const Grid<int> &, Grid<int> &);
     case sf::Event::MouseButtonReleased:
         do_selection();
         break;
-    case sf::Event::KeyPressed:
-        switch (event.key.code) {
-        case sf::Keyboard::Up:
-            --m_selection.y;
-            if (!m_blocks.has_position(m_selection)) {
-                m_selection.y = m_blocks.height() - 1;
-            }
-            break;
-        case sf::Keyboard::Down:
+    default: break;
+    }
+}
+
+void SameGame::handle_event(PlayControlEvent event) {
+    if (event.state == PlayControlState::just_released) {
+        switch (event.id) {
+        case PlayControlId::down:
             ++m_selection.y;
             if (!m_blocks.has_position(m_selection)) {
                 m_selection.y = 0;
             }
             break;
-        case sf::Keyboard::Right:
-            ++m_selection.x;
+        case PlayControlId::up:
+            --m_selection.y;
             if (!m_blocks.has_position(m_selection)) {
-                m_selection.x = 0;
+                m_selection.y = m_blocks.height() - 1;
             }
             break;
-        case sf::Keyboard::Left:
+        case PlayControlId::left:
             --m_selection.x;
             if (!m_blocks.has_position(m_selection)) {
                 m_selection.x = m_blocks.height() - 1;
             }
             break;
-        default: break;
-        }
-    case sf::Event::KeyReleased:
-        switch (event.key.code) {
-        case sf::Keyboard::Return:
+        case PlayControlId::right:
+            ++m_selection.x;
+            if (!m_blocks.has_position(m_selection)) {
+                m_selection.x = 0;
+            }
+            break;
+        case PlayControlId::rotate_left: case PlayControlId::rotate_right:
             do_selection();
             break;
         default: break;
         }
-    default: break;
     }
 }
 

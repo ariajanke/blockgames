@@ -21,8 +21,9 @@
 
 #include "BoardStates.hpp"
 #include "Dialog.hpp"
+#include "PlayControl.hpp"
 
-class ColumnsPiece {
+class ColumnsPiece final : public FallingPieceBase {
 public:
     static constexpr const int k_piece_size = 3;
     using BlocksArray = std::array<std::pair<VectorI, int>, k_piece_size>;
@@ -33,8 +34,8 @@ public:
     void rotate_up();
 
     bool descend(const Grid<int> &);
-    void move_left(const Grid<int> &);
-    void move_right(const Grid<int> &);
+    void move_left(const Grid<int> &) override;
+    void move_right(const Grid<int> &) override;
 
     void place(Grid<int> &) const;
     // places piece at the top
@@ -44,7 +45,11 @@ public:
     BlocksArray as_blocks() const;
 
     VectorI bottom() const;
+
 private:
+    void rotate_left(const BlockGrid &) override { rotate_up(); }
+    void rotate_right(const BlockGrid &) override { rotate_down(); }
+
     enum { k_top, k_middle, k_bottom };
     static constexpr const auto k_positions = { k_top, k_middle, k_bottom };
 
@@ -58,7 +63,7 @@ private:
     VectorI m_bottom = VectorI(0, -1);
 };
 
-class ColumnsState final : public BoardState {
+class ColumnsState final : public PauseableWithFallingPieceState {
     void setup_board(const Settings &) override;
 
     int width_in_blocks () const override;
@@ -66,26 +71,34 @@ class ColumnsState final : public BoardState {
     int height_in_blocks() const override;
 
     void update(double et) override;
-
+#   if 0
     void process_event(const sf::Event & event) override;
 
+    void handle_event(PlayControlEvent) override;
+#   endif
     void draw(sf::RenderTarget &, sf::RenderStates) const override;
 
     int scale() const override { return 3; }
 
-    void check_invarients() const;
+    FallingPieceBase & piece_base() override { return m_falling_piece; }
 
+    const BlockGrid & blocks() const override { return m_blocks; }
+
+    void check_invarients() const;
+#   if 0
     static constexpr const double k_fast_fall = 5.;
     static constexpr const double k_slow_fall = 1.;
-
+#   endif
     ColumnsPiece m_falling_piece;
     double m_fall_offset     = 0.; // normalized to [0 1]
     double m_fall_rate       = 1.5;
+#   if 0
     double m_fall_multiplier = k_slow_fall;
     bool m_paused = false;
+#   endif
     FallEffectsFull m_fall_ef;
 
-    Grid<int> m_blocks;
+    BlockGrid m_blocks;
     Rng m_rng = Rng{ std::random_device()() };
 };
 

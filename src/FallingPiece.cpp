@@ -23,7 +23,7 @@
 
 #include <cassert>
 
-void FallingPiece::rotate_left(const Grid<int> & grid) {
+void FallingPiece::rotate_left(const BlockGrid & grid) {
     using VecI = VectorI;
     /**/ if (m_offset == VecI( 1,  0)) { set_rotation(grid, VecI( 0, -1)); }
     else if (m_offset == VecI( 0, -1)) { set_rotation(grid, VecI(-1,  0)); }
@@ -34,7 +34,7 @@ void FallingPiece::rotate_left(const Grid<int> & grid) {
     check_invarients_with_positions(grid);
 }
 
-void FallingPiece::rotate_right(const Grid<int> & grid) {
+void FallingPiece::rotate_right(const BlockGrid & grid) {
     using VecI = VectorI;
     /**/ if (m_offset == VecI( 1,  0)) { set_rotation(grid, VecI( 0,  1)); }
     else if (m_offset == VecI( 0, -1)) { set_rotation(grid, VecI( 1,  0)); }
@@ -45,23 +45,23 @@ void FallingPiece::rotate_right(const Grid<int> & grid) {
     check_invarients_with_positions(grid);
 }
 
-void FallingPiece::ascend(const Grid<int> & grid) {
+void FallingPiece::ascend(const BlockGrid & grid) {
     (void)move(grid, VectorI(0, -1));
     check_invarients_with_positions(grid);
 }
 
-bool FallingPiece::descend(const Grid<int> & grid) {
+bool FallingPiece::descend(const BlockGrid & grid) {
     bool rv = move(grid, VectorI(0, 1));
     check_invarients_with_positions(grid);
     return rv;
 }
 
-void FallingPiece::move_left(const Grid<int> & grid) {
+void FallingPiece::move_left(const BlockGrid & grid) {
     (void)move(grid, VectorI(-1, 0));
     check_invarients_with_positions(grid);
 }
 
-void FallingPiece::move_right(const Grid<int> & grid) {
+void FallingPiece::move_right(const BlockGrid & grid) {
     (void)move(grid, VectorI(1, 0));
     check_invarients_with_positions(grid);
 }
@@ -71,7 +71,7 @@ void FallingPiece::set_location(VectorI r) {
     check_invarients();
 }
 
-/* private */ void FallingPiece::set_rotation(const Grid<int> & grid, VectorI offset) {
+/* private */ void FallingPiece::set_rotation(const BlockGrid & grid, VectorI offset) {
     assert(offset_ok(offset));
     auto other_location_ = m_location + offset;
     if (has_space_open(grid, other_location_)) {
@@ -86,7 +86,7 @@ void FallingPiece::set_location(VectorI r) {
     }
 }
 
-/* private */ bool FallingPiece::move(const Grid<int> & grid, VectorI offset) {
+/* private */ bool FallingPiece::move(const BlockGrid & grid, VectorI offset) {
     assert(offset_ok(offset));
     if (has_space_open(grid, location      () + offset) &&
         has_space_open(grid, other_location() + offset))
@@ -101,19 +101,19 @@ void FallingPiece::set_location(VectorI r) {
     assert(offset_ok(m_offset));
 }
 
-/* private */ void FallingPiece::check_positions_ok(const Grid<int> &) const {
+/* private */ void FallingPiece::check_positions_ok(const BlockGrid &) const {
 #   if 0
     assert(has_space_open(grid, location()) && has_space_open(grid, other_location()));
 #   endif
 }
 
-/* private */ void FallingPiece::check_invarients_with_positions(const Grid<int> & grid) const {
+/* private */ void FallingPiece::check_invarients_with_positions(const BlockGrid & grid) const {
     check_positions_ok(grid);
     check_invarients();
 }
 
 /* private static */ bool FallingPiece::has_space_open
-    (const Grid<int> & grid, VectorI r)
+    (const BlockGrid & grid, VectorI r)
 {
     if (!grid.has_position(r)) return false;
     return grid(r) == k_empty_block;

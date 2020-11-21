@@ -36,7 +36,7 @@ using ConstScenarioPtr = ScenarioPriv::ConstUPtr;
 
 ConstScenarioPtr move(ScenarioPtr &);
 
-class PuyoState final : public BoardState {
+class PuyoState final : public PauseableWithFallingPieceState {
 public:
     // needed by Scenario
     using Response = MultiType<std::pair<int, int>, Grid<int>>;
@@ -49,8 +49,11 @@ private:
 
     void setup_board(const Settings &) override;
     void update(double et) override;
+#   if 0
     void process_event(const sf::Event &) override;
 
+    void handle_event(PlayControlEvent) override;
+#   endif
     void draw(sf::RenderTarget & target, sf::RenderStates states) const override;
 
     int width_in_blocks () const override { return m_blocks.width () + 4; }
@@ -59,13 +62,17 @@ private:
 
     int scale() const override { return 3; }
 
+    FallingPieceBase & piece_base() override { return m_piece; }
+
+    const BlockGrid & blocks() const override { return m_blocks; }
+
     void update_piece(double);
     void update_pop_effects(double);
     void update_fall_effects(double);
 
     void handle_response(const Response &);
 
-    Grid<int> m_blocks;
+    BlockGrid m_blocks;
     Rng m_rng = Rng { std::random_device()() };
     FallEffectsFull m_fef;
     PuyoPopEffects m_pef;
@@ -75,10 +82,13 @@ private:
     FallingPiece m_piece;
     std::pair<int, int> m_next_piece = std::make_pair(k_empty_block, k_empty_block);
     UpdateFunc m_update_func = &PuyoState::update_fall_effects;
-
+#   if 0
     double m_fall_multi = 1.;
-    int m_pop_requirement = 4;
+
     bool m_is_paused = false;
+#   endif
+
+    int m_pop_requirement = 4;
 
     ScenarioPtr m_current_scenario;
 

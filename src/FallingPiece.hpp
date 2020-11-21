@@ -20,8 +20,9 @@
 #pragma once
 
 #include "Defs.hpp"
+#include "PlayControl.hpp"
 
-class FallingPiece {
+class FallingPiece final : public FallingPieceBase {
 public:
     FallingPiece() {}
 
@@ -34,14 +35,14 @@ public:
     VectorI other_location() const { return m_location + m_offset; }
     int other_color() const { return m_other_color; }
 
-    void rotate_left(const Grid<int> &);
-    void rotate_right(const Grid<int> &);
+    void rotate_left(const BlockGrid &) override;
+    void rotate_right(const BlockGrid &) override;
 
-    void ascend(const Grid<int> &);
+    void ascend(const BlockGrid &);
     /// @returns true is decention was successful
-    bool descend(const Grid<int> &);
-    void move_left(const Grid<int> &);
-    void move_right(const Grid<int> &);
+    bool descend(const BlockGrid &);
+    void move_left(const BlockGrid &) override;
+    void move_right(const BlockGrid &) override;
 
     // hard move, without regard to the state of the board
     void set_location(VectorI);
@@ -50,9 +51,9 @@ private:
     void set_rotation(const Grid<int> &, VectorI offset);
     bool move(const Grid<int> &, VectorI offset);
     void check_invarients() const;
-    void check_positions_ok(const Grid<int> &) const;
+    void check_positions_ok(const BlockGrid &) const;
 
-    void check_invarients_with_positions(const Grid<int> &) const;
+    void check_invarients_with_positions(const BlockGrid &) const;
 
     static bool has_space_open(const Grid<int> &, VectorI);
     // both rotation and translation

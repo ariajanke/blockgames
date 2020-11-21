@@ -29,7 +29,7 @@ bool has_consistent_width(std::initializer_list<std::initializer_list<int>>);
 
 } // end of <anonymous> namespace
 
-Grid<int> make_grid
+BlockGrid make_grid
     (std::initializer_list<std::initializer_list<int>> list)
 {
     assert(has_consistent_width(list));
@@ -55,7 +55,7 @@ Grid<int> make_grid
 }
 
 bool is_grid_the_same
-    (const Grid<int> & grid, std::initializer_list<std::initializer_list<int>> list)
+    (const BlockGrid & grid, std::initializer_list<std::initializer_list<int>> list)
 {
     assert(has_consistent_width(list));
     if (grid.height() != int(list.size())) return false;

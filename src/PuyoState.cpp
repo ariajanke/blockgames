@@ -73,14 +73,15 @@ void PuyoState::setup_board(const Settings & settings) {
 }
 
 void PuyoState::update(double et) {
-    if (m_is_paused) return;
+    PauseableWithFallingPieceState::update(et);
+    if (is_paused()) return;
     assert(!m_blocks.is_empty());
     std::invoke(m_update_func, *this, et);
 }
 
 void PuyoState::update_piece(double et) {
     assert(is_block_color(m_piece.color()) && is_block_color(m_piece.other_color()));
-    if ((m_fall_time += et*m_fall_multi) <= m_fall_delay) return;
+    if ((m_fall_time += et*fall_multiplier()) <= m_fall_delay) return;
 
     m_fall_time = 0.;
     if (!m_piece.descend(m_blocks)) {
@@ -148,9 +149,10 @@ void PuyoState::handle_response(const Response & response) {
         m_update_func = &PuyoState::update_fall_effects;
     }
 }
-
+#if 0
 void PuyoState::process_event(const sf::Event & event) {
     BoardState::process_event(event);
+#   if 0
     if (event.type == sf::Event::KeyPressed) {
         switch (event.key.code) {
         case sf::Keyboard::Down:
@@ -183,8 +185,42 @@ void PuyoState::process_event(const sf::Event & event) {
         default: break;
         }
     }
+#   endif
 }
-
+#endif
+#if 0
+void PuyoState::handle_event(PlayControlEvent event) {
+    if (event.id != PlayControlId::pause && m_is_paused) return;
+    m_piece.handle_event(event, m_blocks);
+    if (   event.state == PlayControlState::just_pressed
+        && event.id    == PlayControlId::pause)
+    {
+        m_is_paused = !m_is_paused;
+    }
+#   if 0
+    using Pcs = PlayControlState;
+    switch (event.state) {
+    case Pcs::just_released:
+        switch (event.id) {
+        case PlayControlId::left        : m_piece.move_left   (m_blocks); break;
+        case PlayControlId::right       : m_piece.move_right  (m_blocks); break;
+        case PlayControlId::rotate_left : m_piece.rotate_left (m_blocks); break;
+        case PlayControlId::rotate_right: m_piece.rotate_right(m_blocks); break;
+        default: break;
+        }
+        break;
+    case Pcs::just_pressed:
+        if (event.id == PlayControlId::pause)
+            m_is_paused = !m_is_paused;
+        break;
+    default: break;
+    }
+#   endif
+    if (event.id == PlayControlId::down) {
+        m_fall_multi = is_pressed(event) ? 5. : 1.;
+    }
+}
+#endif
 /* private */ void PuyoState::draw
     (sf::RenderTarget & target, sf::RenderStates) const
 {

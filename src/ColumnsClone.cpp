@@ -163,7 +163,8 @@ VectorI ColumnsPiece::bottom() const
     { return m_blocks.height(); }
 
 /* private */ void ColumnsState::update(double et) {
-    if (m_paused) return;
+    PauseableWithFallingPieceState::update(et);
+    if (is_paused()) return;
     if (m_fall_ef.has_effects()) {
         m_fall_ef.update(et);
         if (!m_fall_ef.has_effects()) {
@@ -171,7 +172,7 @@ VectorI ColumnsPiece::bottom() const
                 make_blocks_fall(m_blocks, m_fall_ef);
             }
         }
-    } else if ((m_fall_offset += et*m_fall_rate*m_fall_multiplier) > 1.) {
+    } else if ((m_fall_offset += et*m_fall_rate*fall_multiplier()) > 1.) {
         if (!m_falling_piece.descend(m_blocks)) {
             m_falling_piece.place(m_blocks);
             m_falling_piece = ColumnsPiece(random_color(m_rng), random_color(m_rng), random_color(m_rng));
@@ -188,7 +189,7 @@ VectorI ColumnsPiece::bottom() const
     }
     check_invarients();
 }
-
+#if 0
 /* private */ void ColumnsState::process_event(const sf::Event & event) {
     BoardState::process_event(event);
     switch (event.type) {
@@ -226,6 +227,10 @@ VectorI ColumnsPiece::bottom() const
     }
 }
 
+/* private */ void ColumnsState::handle_event(PlayControlEvent event) {
+
+}
+#endif
 /* private */ void ColumnsState::draw
     (sf::RenderTarget & target, sf::RenderStates) const
 {

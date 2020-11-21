@@ -21,6 +21,7 @@
 #include "../src/BlockAlgorithm.hpp"
 #include "../src/EffectsFull.hpp"
 #include "../src/ColumnsClone.hpp"
+#include "../src/PlayControl.hpp"
 
 #include <common/TestSuite.hpp>
 
@@ -42,17 +43,19 @@ bool test_make_blocks_fall(ts::TestSuite &);
 bool test_FallEffectsFull_do_fall_in(ts::TestSuite &);
 bool test_columns_algo(ts::TestSuite &);
 bool test_columns_rotate(ts::TestSuite &);
+bool test_play_control(ts::TestSuite &);
 
 } // end of <anonymous> namespace
 
 int MACRO_TEST_DRIVER_ENTRY_FUNCTION() {
     ts::TestSuite suite;
-    auto test_fns = {
+    static const auto k_test_fns = {
         test_GetEdgeValue, test_select_connected_blocks, test_make_blocks_fall,
-        test_FallEffectsFull_do_fall_in, test_columns_algo, test_columns_rotate
+        test_FallEffectsFull_do_fall_in, test_columns_algo, test_columns_rotate,
+        test_play_control
     };
     bool all_good = true;
-    for (auto f : test_fns) {
+    for (auto f : k_test_fns) {
         all_good = f(suite) && all_good;
     }
     return all_good ? 0 : ~0;
@@ -403,6 +406,58 @@ bool test_columns_rotate(ts::TestSuite & suite) {
                         && blocks[0].second == 3);
     });
 
+    return suite.has_successes_only();
+}
+
+class PceTester final : public PlayControlEventReceiver {
+public:
+    PceTester() {}
+    explicit PceTester(std::vector<PlayControlEvent> && vec)
+        { set_expected(std::move(vec)); }
+
+    void handle_event(PlayControlEvent pce) override {
+        if (m_expected_events.empty()) return;
+        if (are_same(pce, m_expected_events.back())) {
+            m_expected_events.pop_back();
+            return;
+        }
+        throw std::runtime_error("Unexpected play control event.");
+    }
+
+    void set_expected(std::vector<PlayControlEvent> && vec) {
+        m_expected_events = vec;
+        std::reverse(m_expected_events.begin(), m_expected_events.end());
+    }
+private:
+    std::vector<PlayControlEvent> m_expected_events;
+};
+
+sf::Event make_key_press(sf::Keyboard::Key k) {
+    sf::Event e;
+    e.type = sf::Event::KeyPressed;
+    e.key.code = k;
+    e.key.alt = e.key.control = e.key.shift = e.key.system = false;
+    return e;
+}
+sf::Event make_key_release(sf::Keyboard::Key k) {
+    sf::Event e;
+    e.type = sf::Event::KeyReleased;
+    e.key.code = k;
+    e.key.alt = e.key.control = e.key.shift = e.key.system = false;
+    return e;
+}
+
+bool test_play_control(ts::TestSuite & suite) {
+    suite.start_series("PlayControl");
+    suite.test([]() {
+        PceTester tester({
+            PlayControlEvent(PlayControlId::up, PlayControlState::just_pressed)
+        });
+        PlayControlEventHandler pceh;
+        pceh.update(make_key_press(sf::Keyboard::Up));
+        pceh.send_events(tester);
+        return ts::test(true);
+    });
     return suite.has_successes_only();
 }
 

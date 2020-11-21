@@ -45,6 +45,7 @@ SOURCES += \
     ../src/Settings.cpp \
     ../src/PuyoState.cpp \
     ../src/ColumnsClone.cpp \
+    ../src/PlayControl.cpp \
     ../unit-tests/test-driver.cpp \
     \ ##############################################################
     #../../ext/discord-sdk/cpp/core.cpp \
@@ -78,7 +79,8 @@ HEADERS += \
     ../src/PuyoScenario.hpp \
     ../src/Settings.hpp \
     ../src/PuyoState.hpp \
-    ../src/ColumnsClone.hpp
+    ../src/ColumnsClone.hpp \
+    ../src/PlayControl.hpp
 
 INCLUDEPATH += \
     ../lib/cul/inc \

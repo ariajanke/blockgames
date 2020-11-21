@@ -204,28 +204,28 @@ Polyomino::Polyomino(std::vector<Block> && blocks):
     m_blocks(std::move(blocks))
 {}
 
-void Polyomino::rotate_left(const Grid<int> & grid)
+void Polyomino::rotate_left(const BlockGrid & grid)
     { (void)rotate(grid, m_blocks, rotate_plus_halfpi); }
 
-void Polyomino::rotate_right(const Grid<int> & grid)
+void Polyomino::rotate_right(const BlockGrid & grid)
     { (void)rotate(grid, m_blocks, rotate_minus_halfpi); }
 
-void Polyomino::move_up(const Grid<int> & grid)
+void Polyomino::move_up(const BlockGrid & grid)
     { (void)move(grid, m_location, VectorI(0, -1)); }
 
-bool Polyomino::move_down(const Grid<int> & grid)
+bool Polyomino::move_down(const BlockGrid & grid)
     { return move(grid, m_location, VectorI(0, 1)); }
 
-void Polyomino::move_right(const Grid<int> & grid)
+void Polyomino::move_right(const BlockGrid & grid)
     { (void)move(grid, m_location, VectorI(1, 0)); }
 
-void Polyomino::move_left(const Grid<int> & grid)
+void Polyomino::move_left(const BlockGrid & grid)
     { (void)move(grid, m_location, VectorI(-1, 0)); }
 
 void Polyomino::set_location(int x, int y)
     { m_location = VectorI(x, y); }
 
-void Polyomino::place(Grid<int> & grid) const {
+void Polyomino::place(BlockGrid & grid) const {
     for (const auto & block : m_blocks) {
         auto loc = block.offset + m_location;
         if (!grid.has_position(loc)) continue;
@@ -245,7 +245,7 @@ int Polyomino::block_color(int i) const
 VectorI Polyomino::block_location(int i) const
     { return m_blocks[std::size_t(i)].offset + m_location; }
 
-bool Polyomino::obstructed_by(const Grid<int> & grid) const {
+bool Polyomino::obstructed_by(const BlockGrid & grid) const {
     for (const auto & block : m_blocks) {
         auto r = block.offset + m_location;
         if (!grid.has_position(r)) continue;
@@ -255,7 +255,7 @@ bool Polyomino::obstructed_by(const Grid<int> & grid) const {
 }
 
 /* private */ bool Polyomino::move
-    (const Grid<int> & grid, VectorI & location, VectorI offset) const
+    (const BlockGrid & grid, VectorI & location, VectorI offset) const
 {
     // all block new locations must be cleared
 
@@ -283,7 +283,7 @@ bool Polyomino::obstructed_by(const Grid<int> & grid) const {
 }
 
 /* private */ bool Polyomino::rotate
-    (const Grid<int> & grid, std::vector<Block> & blocks, RotateFunc rotf) const
+    (const BlockGrid & grid, std::vector<Block> & blocks, RotateFunc rotf) const
 {
     if (!m_rotation_enabled) return false;
     for (const auto & block : m_blocks) {

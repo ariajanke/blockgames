@@ -112,9 +112,11 @@ struct AlwaysMidRng {
     T operator () () { return T(0.5); }
 };
 
-Grid<int> make_grid(std::initializer_list<std::initializer_list<int>>);
+using BlockGrid = Grid<int>;
 
-bool is_grid_the_same(const Grid<int> &, std::initializer_list<std::initializer_list<int>>);
+BlockGrid make_grid(std::initializer_list<std::initializer_list<int>>);
+
+bool is_grid_the_same(const BlockGrid &, std::initializer_list<std::initializer_list<int>>);
 
 inline bool is_block_color(int x)
     { return x > k_empty_block && x < k_glass_block; }

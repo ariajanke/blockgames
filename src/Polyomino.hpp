@@ -20,8 +20,9 @@
 #pragma once
 
 #include "Defs.hpp"
+#include "PlayControl.hpp"
 
-class Polyomino {
+class Polyomino final : public FallingPieceBase {
 public:
     struct Block {
         Block() {}
@@ -53,14 +54,14 @@ public:
     Polyomino() {}
     explicit Polyomino(std::vector<Block> &&);
 
-    void rotate_left(const Grid<int> &);
-    void rotate_right(const Grid<int> &);
-    void move_up(const Grid<int> &);
-    bool move_down(const Grid<int> &);
-    void move_right(const Grid<int> &);
-    void move_left(const Grid<int> &);
+    void rotate_left(const BlockGrid &);
+    void rotate_right(const BlockGrid &);
+    void move_up(const BlockGrid &);
+    bool move_down(const BlockGrid &);
+    void move_right(const BlockGrid &);
+    void move_left(const BlockGrid &);
     void set_location(int x, int y);
-    void place(Grid<int> &) const;
+    void place(BlockGrid &) const;
     VectorI location() const { return m_location; }
     void set_colors(int);
     void enable_rotation() { m_rotation_enabled = true; }
@@ -70,12 +71,12 @@ public:
     int block_color(int) const;
     VectorI block_location(int) const;
 
-    bool obstructed_by(const Grid<int> &) const;
+    bool obstructed_by(const BlockGrid &) const;
 
 private:
     using RotateFunc = VectorI(*)(VectorI);
-    bool move(const Grid<int> &, VectorI & location, VectorI offset) const;
-    bool rotate(const Grid<int> &, std::vector<Block> &, RotateFunc) const;
+    bool move(const BlockGrid &, VectorI & location, VectorI offset) const;
+    bool rotate(const BlockGrid &, std::vector<Block> &, RotateFunc) const;
 
     static VectorI rotate_plus_halfpi (VectorI r) { return VectorI(-r.y, r.x); }
     static VectorI rotate_minus_halfpi(VectorI r) { return VectorI(r.y, -r.x); }
