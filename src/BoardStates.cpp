@@ -66,13 +66,30 @@ using InvArg       = std::invalid_argument;
 
 /* protected static */ void BoardState::draw_fill_with_background
     (sf::RenderTarget & target,
-     int board_width, int board_height, VectorI offset)
+     int board_width, int board_height, VectorI offset, sf::Color mask)
 {
     sf::Sprite brush;
+    brush.setColor(mask);
     brush.setTexture(load_builtin_block_texture());
     brush.setTextureRect(texture_rect_for_background());
     for (int y = 0; y != board_height; ++y) {
     for (int x = 0; x != board_width ; ++x) {
+        brush.setPosition(sf::Vector2f(VectorI(x, y)*k_block_size + offset));
+        target.draw(brush);
+    }}
+}
+
+/* protected static */ void BoardState::draw_fill_with_score_background
+    (sf::RenderTarget & target, int board_width, int board_height,
+     VectorI offset)
+{
+    static const constexpr unsigned k_seed = 0x71EF2Bu;
+    Rng rng { k_seed };
+    sf::Sprite brush;
+    brush.setTexture(load_builtin_block_texture());
+    for (int y = 0; y != board_height; ++y) {
+    for (int x = 0; x != board_width ; ++x) {
+        brush.setTextureRect(texture_rect_for_wood_board(IntDistri(0, k_wood_board_count - 1)(rng)));
         brush.setPosition(sf::Vector2f(VectorI(x, y)*k_block_size + offset));
         target.draw(brush);
     }}

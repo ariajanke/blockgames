@@ -149,82 +149,12 @@ void PuyoState::handle_response(const Response & response) {
         m_update_func = &PuyoState::update_fall_effects;
     }
 }
-#if 0
-void PuyoState::process_event(const sf::Event & event) {
-    BoardState::process_event(event);
-#   if 0
-    if (event.type == sf::Event::KeyPressed) {
-        switch (event.key.code) {
-        case sf::Keyboard::Down:
-            m_fall_multi = 5.;
-            break;
-        default: break;
-        }
-    } else if (event.type == sf::Event::KeyReleased) {
-        switch (event.key.code) {
-        case sf::Keyboard::Up:
-            break;
-        case sf::Keyboard::Down:
-            m_fall_multi = 1.;
-            break;
-        case sf::Keyboard::Right:
-            m_piece.move_right(m_blocks);
-            break;
-        case sf::Keyboard::Left:
-            m_piece.move_left(m_blocks);
-            break;
-        case sf::Keyboard::A:
-            m_piece.rotate_left(m_blocks);
-            break;
-        case sf::Keyboard::S:
-            m_piece.rotate_right(m_blocks);
-            break;
-        case sf::Keyboard::Return:
-            m_is_paused = !m_is_paused;
-            break;
-        default: break;
-        }
-    }
-#   endif
-}
-#endif
-#if 0
-void PuyoState::handle_event(PlayControlEvent event) {
-    if (event.id != PlayControlId::pause && m_is_paused) return;
-    m_piece.handle_event(event, m_blocks);
-    if (   event.state == PlayControlState::just_pressed
-        && event.id    == PlayControlId::pause)
-    {
-        m_is_paused = !m_is_paused;
-    }
-#   if 0
-    using Pcs = PlayControlState;
-    switch (event.state) {
-    case Pcs::just_released:
-        switch (event.id) {
-        case PlayControlId::left        : m_piece.move_left   (m_blocks); break;
-        case PlayControlId::right       : m_piece.move_right  (m_blocks); break;
-        case PlayControlId::rotate_left : m_piece.rotate_left (m_blocks); break;
-        case PlayControlId::rotate_right: m_piece.rotate_right(m_blocks); break;
-        default: break;
-        }
-        break;
-    case Pcs::just_pressed:
-        if (event.id == PlayControlId::pause)
-            m_is_paused = !m_is_paused;
-        break;
-    default: break;
-    }
-#   endif
-    if (event.id == PlayControlId::down) {
-        m_fall_multi = is_pressed(event) ? 5. : 1.;
-    }
-}
-#endif
+
 /* private */ void PuyoState::draw
     (sf::RenderTarget & target, sf::RenderStates) const
 {
     draw_fill_with_background(target, m_blocks.width(), m_blocks.height());
+    draw_fill_with_score_background(target, 3, m_blocks.height(), VectorI(m_blocks.width(), 0)*k_block_size);
 
     if (m_pef.has_effects()) {
         target.draw(m_pef);
@@ -272,15 +202,20 @@ void PuyoState::handle_event(PlayControlEvent event) {
         draw_block(m_piece.other_color(), m_piece.other_location()*k_block_size + VectorI(0, y_offset));
     }
 
-    draw_block(m_next_piece.first , VectorI(m_blocks.width(), 1)*k_block_size);
-    draw_block(m_next_piece.second, VectorI(m_blocks.width(), 0)*k_block_size);
+    brush.setColor(sf::Color::White);
+    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 2)*k_block_size));
+    brush.setTextureRect(texture_rect_for_next());
+    target.draw(brush);
+
+    draw_block(m_next_piece.first , VectorI(m_blocks.width(), 3)*k_block_size);
+    draw_block(m_next_piece.second, VectorI(m_blocks.width(), 4)*k_block_size);
 
     brush.setTextureRect(texture_rect_for_score());
     brush.setColor(sf::Color::White);
-    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 2)*k_block_size));
+    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 0)*k_block_size));
     target.draw(brush);
 
-    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 3)*k_block_size));
+    brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 1)*k_block_size));
     {
     for (char c : std::to_string(m_score)) {
         brush.setTextureRect(texture_rect_for_char(c));

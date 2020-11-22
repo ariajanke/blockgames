@@ -49,14 +49,10 @@ private:
 
     void setup_board(const Settings &) override;
     void update(double et) override;
-#   if 0
-    void process_event(const sf::Event &) override;
 
-    void handle_event(PlayControlEvent) override;
-#   endif
     void draw(sf::RenderTarget & target, sf::RenderStates states) const override;
 
-    int width_in_blocks () const override { return m_blocks.width () + 4; }
+    int width_in_blocks () const override { return m_blocks.width () + 3; }
 
     int height_in_blocks() const override { return m_blocks.height(); }
 
@@ -82,11 +78,6 @@ private:
     FallingPiece m_piece;
     std::pair<int, int> m_next_piece = std::make_pair(k_empty_block, k_empty_block);
     UpdateFunc m_update_func = &PuyoState::update_fall_effects;
-#   if 0
-    double m_fall_multi = 1.;
-
-    bool m_is_paused = false;
-#   endif
 
     int m_pop_requirement = 4;
 

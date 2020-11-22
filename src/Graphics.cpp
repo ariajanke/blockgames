@@ -151,8 +151,19 @@ sf::IntRect texture_rect_for_background() {
     return sf::IntRect(0, (k_color_group_size*2 + 1)*k_block_size, k_block_size, k_block_size);
 }
 
+sf::IntRect texture_rect_for_wood_board(int n) {
+    if (n < 0 || n >= k_wood_board_count) {
+        throw std::invalid_argument("texture_rect_for_wood_board: ");
+    }
+    return sf::IntRect((1 + n)*k_block_size, (k_color_group_size*2 + 1)*k_block_size, k_block_size, k_block_size);
+}
+
 sf::IntRect texture_rect_for_score() {
     return sf::IntRect(0, k_score_start_y, k_score_card_width, k_block_size);
+}
+
+sf::IntRect texture_rect_for_next() {
+    return sf::IntRect(0, k_score_start_y + k_block_size, k_score_card_width, k_block_size);
 }
 
 sf::IntRect texture_rect_for_char(char c) {
@@ -223,7 +234,7 @@ const ColorGrid & builtin_blocks() {
     rv = std::make_unique<ColorGrid>();
     Grid<sf::Color> & grid = *rv;
     grid.set_size( k_color_group_size*3     *k_block_size,
-                  (k_color_group_size*2 + 3)*k_block_size, sf::Color::White);
+                  (k_color_group_size*2 + 4)*k_block_size, sf::Color(0, 0, 0, 0));
     for (int color = k_min_colors; color != k_max_colors + 1; ++color) {
         auto [color_val, offset] = get_color_group_info(color);
         (void)color_val; // color added at draw time
@@ -250,9 +261,9 @@ const ColorGrid & builtin_blocks() {
     add_specials(make_sub_grid(grid, VectorI(0, k_color_group_size*2*k_block_size)));
     add_builtin_background(make_sub_grid(grid,
         VectorI(0, (k_color_group_size*2 + 1)*k_block_size),
-        k_block_size, k_block_size));
+        k_block_size*4, k_block_size));
     add_builtin_score_numbers(make_sub_grid(grid,
-        VectorI(0, k_score_start_y), SubGrid<int>::k_rest_of_grid, k_block_size));
+        VectorI(0, k_score_start_y), SubGrid<int>::k_rest_of_grid, 2*k_block_size));
     return *rv;
 }
 
@@ -335,11 +346,6 @@ const char * verify_16x16(const char *);
 
 const char * get_special_block(int x);
 
-#if 0
-const char * get_edge_mask(const TileEdges & edges) {
-    return verify_16x16(get_edge_mask_impl(edges));
-}
-#endif
 void add_edge_masks(SubGrid<sf::Color> grid) {
     auto itr = k_full_edge_list.begin();
     for (int y = 0; y != 4; ++y) {
@@ -349,7 +355,8 @@ void add_edge_masks(SubGrid<sf::Color> grid) {
         SubGrid<sf::Color> subg = grid.make_sub_grid
             (VectorI(x*k_block_size, y*k_block_size), k_block_size, k_block_size);
         for (VectorI r; r != subg.end_position(); r = subg.next(r)) {
-            auto c = subg(r);
+            auto & c = subg(r);
+            c = sf::Color::White;
             switch (mask[to_16x16_index(r)]) {
             case ' ': break;
             case 'X':
@@ -364,12 +371,11 @@ void add_edge_masks(SubGrid<sf::Color> grid) {
                 break;
             case '-':
                 //c.a = (c.a*3) / 4;
-                c.r /= 2;
-                c.g /= 2;
-                c.b /= 2;
+                c.r = uint8_t(c.r*2 / 3);
+                c.g = uint8_t(c.g*2 / 3);
+                c.b = uint8_t(c.b*2 / 3);
                 break;
             }
-            subg(r) = c;
         }
     }}
 }
@@ -390,6 +396,7 @@ void add_specials(SubGrid<sf::Color> grid) {
              k_block_size, k_block_size);
         for (VectorI r; r != subg.end_position(); r = subg.next(r)) {
             auto & c = subg(r);
+            c = sf::Color::White;
             switch (get_special_block(*itr)[to_16x16_index(r)]) {
             case ' ': c.a =   0; break;
             case 'x': c.a = 128; break;
@@ -398,16 +405,12 @@ void add_specials(SubGrid<sf::Color> grid) {
             }
         }
     }
-#   if 0
-    add_builtin_background(grid.make_sub_grid(
-        VectorI(k_specials_list.size()*k_block_size, 0), k_block_size, k_block_size
-    ));
-#   endif
 }
 
 void add_builtin_background(SubGrid<sf::Color> subgrid) {
+#   if 0
     assert(subgrid.width() == k_block_size && subgrid.height() == k_block_size);
-
+#   endif
     static constexpr const char * const k_bricks =
         // 0123456789ABCDEF
         """XXXXXXXXXXXXXXXX"// 0
@@ -428,8 +431,10 @@ void add_builtin_background(SubGrid<sf::Color> subgrid) {
         """   X--     X    "// F
         ;
 
-    for (VectorI r; r != subgrid.end_position(); r = subgrid.next(r)) {
-        subgrid(r) = [](char c) {
+    {
+    auto subg = make_sub_grid(subgrid, k_block_size, k_block_size);
+    for (VectorI r; r != subg.end_position(); r = subg.next(r)) {
+        subg(r) = [](char c) {
             switch (c) {
             case 'X': return sf::Color( 73,  73,  73);
             case '-': return sf::Color(160, 160, 160);
@@ -437,6 +442,80 @@ void add_builtin_background(SubGrid<sf::Color> subgrid) {
             default: throw ;
             }
         }(k_bricks[to_16x16_index(r)]);
+    }
+    }
+
+    static const auto k_wood_boards = {
+        // 0123456789ABCDEF
+        """XXXXXXXXx |  | X"// 0
+        """xxx    Xx    | X"// 1
+        """x    o Xxo     X"// 2
+        """x      Xx      X"// 3
+        """x |    XXXXXXXXX"// 4
+        """x |  | Xxxx    X"// 5
+        """x |  | Xx o    X"// 6
+        """x |  | Xx    | X"// 7
+        """x    | Xx |  | X"// 8
+        """x      Xx |    X"// 9
+        """x |    Xx    o X"// A
+        """x |  | Xx      X"// B
+        """x |  | XXXXXXXXX"// C
+        """x |  | Xxxx    X"// D
+        """x    | Xx o  | X"// E
+        """x      Xx |  | X"// F
+        ,
+        // 0123456789ABCDEF
+        """x |    Xx |  | X"// 0
+        """x |  | Xx |  | X"// 1
+        """x |  | Xx |    X"// 2
+        """x |  | Xx      X"// 3
+        """x    | Xx    | X"// 4
+        """x      Xx |  | X"// 5
+        """x    o Xx |  | X"// 6
+        """x      Xx |  | X"// 7
+        """XXXXXXXXx |    X"// 8
+        """xxx    Xx      X"// 9
+        """x o    Xx    o X"// A
+        """x    | Xx      X"// B
+        """x |  | XXXXXXXXX"// C
+        """x |  | Xxxx    X"// D
+        """x |  | Xx o    X"// E
+        """x |    Xx    | X"// F
+        ,
+        // 0123456789ABCDEF
+        """x    | Xx |  | X"// 0
+        """x    | Xx |  | X"// 1
+        """x o    Xx |  | X"// 2
+        """x      Xx |    X"// 3
+        """XXXXXXXXx      X"// 4
+        """xxx    Xx |  | X"// 5
+        """x o    Xx |  | X"// 6
+        """x    | Xx |  | X"// 7
+        """x |  | Xx |    X"// 8
+        """x |    Xx    | X"// 9
+        """x |  o Xx    | X"// A
+        """x      Xx |  | X"// B
+        """XXXXXXXXx |    X"// C
+        """xxx    Xx |    X"// D
+        """x o    Xx    | X"// E
+        """x    | Xx |  | X"// F
+    };
+    VectorI offset(k_block_size, 0);
+    for (auto k_tile : k_wood_boards) {
+        auto subg = make_sub_grid(subgrid, offset, k_block_size, k_block_size);
+        for (VectorI r; r != subg.end_position(); r = subg.next(r)) {
+            subg(r) = [](char c) {
+                switch (c) {
+                case 'X': return sf::Color(0x35, 0x0F, 0x00);
+                case 'x': return sf::Color(0x57, 0x15, 0x00);
+                case '|': return sf::Color(0x77, 0x3D, 0x17);
+                case 'o': return sf::Color(126, 126, 126);
+                case ' ': return sf::Color(0x95, 0x55, 0x27); //955527
+                default: throw ;
+                }
+            }(k_tile[to_16x16_index(r)]);
+        }
+        offset.x += k_block_size;
     }
 }
 
@@ -525,18 +604,42 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
         """   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    "// E
         """                                                "// F
         ;
+
     assert((strlen(k_score_card) / k_block_size) == k_score_card_width);
+
+    static constexpr int k_next_card_width = 16*3;
+    static constexpr const char * const k_next_card =
+        //                 1---------------2---------------
+        // 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+        """                                                "// 0
+        """       XXXX      XX  xXXXXXXX  Xx    xX  XXXXXX "// 1
+        """       XXxxX     XX  XXXXXXx    Xx  xX   XXXXXX "// 2
+        """  XXXX XX  xX    XX  Xx          XxxX      XX   "// 3
+        """ XxxxX XX  xX    XX  Xx          XxxX      XX   "// 4
+        """ Xx xX XX  xX    XX  Xx           XX       XX   "// 5
+        """ XxxxX XX   xXx  XX  XXXXXXXx     XX       XX   "// 6
+        """  XXX  XX   xXx  XX  XXXXXXx      XX       XX   "// 7
+        """       XX   xXx  XX  Xx           XX       XX   "// 8
+        """       XX     Xx XX  Xx          XxxX      XX   "// 9
+        """       XX     Xx XX  Xx          XxxX      XX   "// A
+        """       XX     XxxXX  XXXXXXx    Xx  xX     XX   "// B
+        """       XX      XXXX  xXXXXXXX  Xx    xX    XX   "// C
+        """                                                "// D
+        """                                                "// E
+        """                                                "// F
+        ;
 
     using std::make_pair;
     static const auto k_graphic_list = {
         make_pair(k_score_card_width        , k_score_card        ),
         make_pair(k_numbers_plus_minus_width, k_numbers_plus_minus),
         make_pair(k_numbers_0_5_width       , k_numbers_0_5       ),
-        make_pair(k_numbers_8_9_width       , k_numbers_8_9       )
+        make_pair(k_numbers_8_9_width       , k_numbers_8_9       ),
+        make_pair(k_next_card_width         , k_next_card         )
     };
     static const int k_total_width = []() {
         int rv = 0;
-        for (auto & p : k_graphic_list) rv += p.first;
+        for (auto & p : k_graphic_list) rv += std::get<0>(p);
         return rv;
     } ();
     static auto char_to_color = [](char c) {
@@ -547,15 +650,26 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
         default: throw std::invalid_argument("not a valid color character");
         }
     };
+#   if 0
     assert(subgrid.width() >= k_total_width);
+#   endif
     VectorI offset;
     for (auto [width, char_itr] : k_graphic_list) {
+        if (offset.x + width > subgrid.width()) {
+            offset.x = 0;
+            offset.y += k_block_size;
+            if (!subgrid.has_position(offset)) {
+                throw std::runtime_error("provided subgrid does not have enough height");
+            }
+        }
+
         [[maybe_unused]] auto char_end = char_itr + strlen(char_itr);
         auto target = make_sub_grid(subgrid, offset, width, k_block_size);
         for (VectorI r; r != target.end_position(); r = target.next(r)) {
             assert(char_itr != char_end);
             target(r) = char_to_color(*char_itr++);
         }
+
         offset.x += width;
     }
 }

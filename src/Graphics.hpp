@@ -45,7 +45,12 @@ sf::IntRect texture_rect_for(int);
 
 sf::IntRect texture_rect_for_background();
 
+constexpr const int k_wood_board_count = 3;
+sf::IntRect texture_rect_for_wood_board(int);
+
 sf::IntRect texture_rect_for_score();
+
+sf::IntRect texture_rect_for_next();
 
 sf::IntRect texture_rect_for_char(char);
 
