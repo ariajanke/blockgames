@@ -50,9 +50,7 @@ protected:
     virtual int width_in_blocks () const = 0;
 
     virtual int height_in_blocks() const = 0;
-#   if 0
-    void handle_event(PlayControlEvent) override {}
-#   endif
+
     /** Sets board settings */
     void setup_(Settings &) final;
 
@@ -81,62 +79,9 @@ public:
     static constexpr const double k_slow_fall  = 1.;
     static constexpr const double k_move_delay = 1. / 8.;
 
-    void update(double et) override {
-        BoardState::update(et);
-        if (is_paused()) return;
-        if (m_move_dir == k_niether_dir) {
-            m_move_time = 0.;
-            return;
-        }
-        if ((m_move_time += et) >= k_move_delay) {
-            switch (m_move_dir) {
-            case PlayControlId::left:
-                piece_base().move_left(blocks());
-                break;
-            case PlayControlId::right:
-                piece_base().move_right(blocks());
-                break;
-            default:
-                throw std::runtime_error("PauseableWithFallingPieceState::update: "
-                                         "m_move_dir must be either right, left, or count.");
-            }
-            m_move_time = 0.;
-        }
-        m_move_dir = k_niether_dir;
-    }
+    void update(double et) override;
 
-    void handle_event(PlayControlEvent event) override {
-        if (event.id != PlayControlId::pause && m_is_paused) return;
-        if (event.state == PlayControlState::just_released) {
-            switch (event.id) {
-            case PlayControlId::left:
-                if (m_move_time == 0.)
-                    piece_base().move_left(blocks());
-                break;
-            case PlayControlId::right:
-                if (m_move_time == 0.)
-                    piece_base().move_right(blocks());
-                break;
-            case PlayControlId::rotate_left : piece_base().rotate_left (blocks()); break;
-            case PlayControlId::rotate_right: piece_base().rotate_right(blocks()); break;
-            default: break;
-            }
-        }
-
-        if (is_pressed(event) && (   event.id == PlayControlId::left
-                                  || event.id == PlayControlId::right))
-        {
-            m_move_dir = event.id;
-        }
-
-        if (   event.state == PlayControlState::just_pressed
-            && event.id    == PlayControlId::pause)
-        { m_is_paused = !m_is_paused; }
-
-        if (event.id == PlayControlId::down) {
-            m_fall_multiplier = is_pressed(event) ? 5.*(blocks().height() / 10) : 1.;
-        }
-    }
+    void handle_event(PlayControlEvent) override;
 
 protected:
     virtual FallingPieceBase & piece_base() = 0;

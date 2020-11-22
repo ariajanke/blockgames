@@ -23,15 +23,17 @@ instructions presented in the app.
 
 ## Goals
 - 12 Scenarios for the Puyo derivative
-    * 3 non-sequential scenarios
+    * 3 non-sequential scenarios (2/3)
     * 1 special pop forever "screen saver"
     * 8 sequential unlockable scenarios
 - 4 Scenarios for the Tetris derivative
 - Free Play Modes for the remaining two games
+    * Columns needs popping effects
+    * Two of the four games needs score board/next
+    * Same game, add a timer and score board
 - About/How to play dialog
-
-### Additional goals as of 11-19
-- Re-assignable controls
+- Re-assignable controls (done !)
+    * make controls re-assignable in program
 - Have configuration accessible to free play scenarios, in scenario select.
     * each free play scenario has it's own configuration
 - Instructions presented in game(?)

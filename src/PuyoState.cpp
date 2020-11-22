@@ -29,6 +29,8 @@ namespace {
 
 VectorI get_spawn_point(const Grid<int> &);
 
+std::string pad_to_right(std::string &&, int);
+
 } // end of <anonymous> namespace
 
 void ScenarioPriv::DefDeleter::operator () (Scenario * ptr) const
@@ -217,10 +219,12 @@ void PuyoState::handle_response(const Response & response) {
 
     brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 1)*k_block_size));
     {
-    for (char c : std::to_string(m_score)) {
-        brush.setTextureRect(texture_rect_for_char(c));
-        target.draw(brush);
-        brush.move(float(texture_rect_for_char(c).width), 0.f);
+    for (char c : pad_to_right(std::to_string(std::min(m_score, 999999)), 6)) {
+        if (c != ' ') {
+            brush.setTextureRect(texture_rect_for_char(c));
+            target.draw(brush);
+        }
+        brush.move(float(texture_rect_for_char('0').width), 0.f);
     }
     }
 }
@@ -231,6 +235,14 @@ VectorI get_spawn_point(const Grid<int> & board) {
     auto w = board.width();
     auto x = (w / 2) - (w % 2 ? 0 : 1);
     return VectorI(x, 0);
+}
+
+std::string pad_to_right(std::string && str, int pad) {
+    if (int(str.length()) > pad) {
+        throw std::invalid_argument("pad_to_right: string too large");
+    }
+    str.insert(str.begin(), pad - int(str.length()), ' ');
+    return std::move(str);
 }
 
 } // end of <anonymous> namespace

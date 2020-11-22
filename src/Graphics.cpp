@@ -27,6 +27,7 @@
 #include <stdexcept>
 #include <memory>
 #include <tuple>
+#include <functional>
 
 #include <cassert>
 #include <cstring>
@@ -408,9 +409,8 @@ void add_specials(SubGrid<sf::Color> grid) {
 }
 
 void add_builtin_background(SubGrid<sf::Color> subgrid) {
-#   if 0
-    assert(subgrid.width() == k_block_size && subgrid.height() == k_block_size);
-#   endif
+    assert(subgrid.width() == k_block_size*4 && subgrid.height() == k_block_size);
+
     static constexpr const char * const k_bricks =
         // 0123456789ABCDEF
         """XXXXXXXXXXXXXXXX"// 0
@@ -447,11 +447,11 @@ void add_builtin_background(SubGrid<sf::Color> subgrid) {
 
     static const auto k_wood_boards = {
         // 0123456789ABCDEF
-        """XXXXXXXXx |  | X"// 0
-        """xxx    Xx    | X"// 1
+        """x |    Xx |  | X"// 0
+        """x      Xx    | X"// 1
         """x    o Xxo     X"// 2
         """x      Xx      X"// 3
-        """x |    XXXXXXXXX"// 4
+        """xXXXXXXXXXXXXXXX"// 4
         """x |  | Xxxx    X"// 5
         """x |  | Xx o    X"// 6
         """x |  | Xx    | X"// 7
@@ -507,7 +507,7 @@ void add_builtin_background(SubGrid<sf::Color> subgrid) {
             subg(r) = [](char c) {
                 switch (c) {
                 case 'X': return sf::Color(0x35, 0x0F, 0x00);
-                case 'x': return sf::Color(0x57, 0x15, 0x00);
+                case 'x': return sf::Color(0x6A, 0x29, 0x09);
                 case '|': return sf::Color(0x77, 0x3D, 0x17);
                 case 'o': return sf::Color(126, 126, 126);
                 case ' ': return sf::Color(0x95, 0x55, 0x27); //955527
@@ -612,18 +612,18 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
         //                 1---------------2---------------
         // 0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
         """                                                "// 0
-        """       XXXX      XX  xXXXXXXX  Xx    xX  XXXXXX "// 1
-        """       XXxxX     XX  XXXXXXx    Xx  xX   XXXXXX "// 2
-        """  XXXX XX  xX    XX  Xx          XxxX      XX   "// 3
-        """ XxxxX XX  xX    XX  Xx          XxxX      XX   "// 4
-        """ Xx xX XX  xX    XX  Xx           XX       XX   "// 5
-        """ XxxxX XX   xXx  XX  XXXXXXXx     XX       XX   "// 6
-        """  XXX  XX   xXx  XX  XXXXXXx      XX       XX   "// 7
-        """       XX   xXx  XX  Xx           XX       XX   "// 8
-        """       XX     Xx XX  Xx          XxxX      XX   "// 9
-        """       XX     Xx XX  Xx          XxxX      XX   "// A
-        """       XX     XxxXX  XXXXXXx    Xx  xX     XX   "// B
-        """       XX      XXXX  xXXXXXXX  Xx    xX    XX   "// C
+        """   XXXX      XX  xXXXXXXX  Xx    xX  XXXXXXXX   "// 1
+        """   XXxxX     XX  XXXXXXx    Xx  xX   XXXXXXXX   "// 2
+        """   XX  xX    XX  Xx          XxxX       XX      "// 3
+        """   XX  xX    XX  Xx          XxxX       XX      "// 4
+        """   XX  xX    XX  Xx           XX        XX      "// 5
+        """   XX   xXx  XX  XXXXXXXx     XX        XX      "// 6
+        """   XX   xXx  XX  XXXXXXx      XX        XX      "// 7
+        """   XX   xXx  XX  Xx           XX        XX      "// 8
+        """   XX     Xx XX  Xx          XxxX       XX      "// 9
+        """   XX     Xx XX  Xx          XxxX       XX      "// A
+        """   XX     XxxXX  XXXXXXx    Xx  xX      XX      "// B
+        """   XX      XXXX  xXXXXXXX  Xx    xX     XX      "// C
         """                                                "// D
         """                                                "// E
         """                                                "// F
@@ -671,6 +671,27 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
         }
 
         offset.x += width;
+    }
+
+    for (VectorI r; r != subgrid.end_position(); r = subgrid.next(r)) {
+        if (subgrid(r).a != 0) continue;
+        auto get_neighbor = [&subgrid, r](int off_x, int off_y) {
+            VectorI offset(off_x, off_y);
+            if (!subgrid.has_position(r + offset)) return sf::Color(0, 0, 0, 0);
+            return subgrid(r + offset);
+        };
+        auto neighbors = {
+            get_neighbor(-1, 0), get_neighbor(1,  0),
+            get_neighbor( 0, 1), get_neighbor(0, -1)
+        };
+        static const auto is_non_special_color = [](sf::Color c)
+            { return c.a != 0 && c != sf::Color::Black; };
+        // this refers to colors
+        bool any_is_non_special_color = std::any_of(
+            neighbors.begin(), neighbors.end(), is_non_special_color);
+        if (any_is_non_special_color) {
+            subgrid(r) = sf::Color::Black;
+        }
     }
 }
 

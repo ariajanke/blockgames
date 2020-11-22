@@ -127,8 +127,8 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
     static auto mk_uandd = [](sf::Joystick::Axis axis) {
         JoystickEntry uandd;
         uandd.axis = axis;
-        uandd.neg  = PlayControlId::down;
-        uandd.pos  = PlayControlId::up;
+        uandd.neg  = PlayControlId::up;
+        uandd.pos  = PlayControlId::down;
         return SfEventEntry(std::in_place_type_t<JoystickEntry>(), uandd);
     };
 
