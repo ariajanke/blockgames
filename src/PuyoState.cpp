@@ -123,6 +123,7 @@ void PuyoState::update_fall_effects(double et) {
     } else {
         // after pop
         m_score += m_pef.get_score_delta_and_reset_wave_number();
+        m_score = std::min(k_max_possible_score, m_score);
         handle_response(m_current_scenario->on_turn_change());
     }
 }
@@ -219,7 +220,7 @@ void PuyoState::handle_response(const Response & response) {
 
     brush.setPosition(sf::Vector2f(VectorI(m_blocks.width(), 1)*k_block_size));
     {
-    for (char c : pad_to_right(std::to_string(std::min(m_score, 999999)), 6)) {
+    for (char c : pad_to_right(std::to_string(std::min(m_score, k_max_possible_score)), 6)) {
         if (c != ' ') {
             brush.setTextureRect(texture_rect_for_char(c));
             target.draw(brush);

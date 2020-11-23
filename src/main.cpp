@@ -1,6 +1,6 @@
 #include "EffectsFull.hpp"
 #include "Graphics.hpp"
-
+#include "WakefullnessUpdater.hpp"
 #include "DialogState.hpp"
 #include "Settings.hpp"
 // #include "discord.h"
@@ -86,11 +86,13 @@ int main(int argc, char ** argv) {
             default: break;
             }
             app_state->process_event(event);
+            WakefullnessUpdater::instance().check_for_waking_events(event);
         }
         }
         anchor.update_position(win);
 
         app_state->update(1. / 60.);
+        WakefullnessUpdater::instance().update(1. / 60.);
         if (auto new_state = app_state->next_state()) {
             new_state.swap(app_state);
             if (app_state->is_quiting_application())

@@ -305,7 +305,7 @@ ColorGroupInfo get_color_group_info(int color) {
         throw std::invalid_argument("color_block_nfo: Empty block has no color");
     case 1: return make_tuple(Color(230,  70,  70), mk_v(0, 0));
     case 2: return make_tuple(Color( 70, 230,  70), mk_v(1, 0));
-    case 3: return make_tuple(Color( 70,  70, 230), mk_v(2, 0));
+    case 3: return make_tuple(Color(100, 100, 250), mk_v(2, 0));
     case 4: return make_tuple(Color(230, 230,  70), mk_v(0, 1));
     case 5: return make_tuple(Color(230,  70, 230), mk_v(1, 1));
     }

@@ -4,7 +4,7 @@ CONFIG  -= c++11
 QMAKE_CXXFLAGS += -std=c++17 -pedantic -Wall
 QMAKE_LFLAGS   += -std=c++17
 LIBS           += -lsfml-graphics -lsfml-window -lsfml-system -lksg -lcommon-d \
-                  \ # -ldiscord_game_sdk \
+                  -lX11 \ # -ldiscord_game_sdk \
                   -L/usr/lib/x86_64-linux-gnu -L$$PWD/../lib/cul -L$$PWD/../lib/ksg
                   -L$$PWD/../../ext/discord-sdk/lib/x86_64
 
@@ -46,6 +46,7 @@ SOURCES += \
     ../src/PuyoState.cpp \
     ../src/ColumnsClone.cpp \
     ../src/PlayControl.cpp \
+    ../src/WakefullnessUpdater.cpp \
     ../unit-tests/test-driver.cpp \
     \ ##############################################################
     #../../ext/discord-sdk/cpp/core.cpp \
@@ -80,6 +81,7 @@ HEADERS += \
     ../src/Settings.hpp \
     ../src/PuyoState.hpp \
     ../src/ColumnsClone.hpp \
+    ../src/WakefullnessUpdater.hpp \
     ../src/PlayControl.hpp
 
 INCLUDEPATH += \

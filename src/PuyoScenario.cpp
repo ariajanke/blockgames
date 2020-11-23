@@ -19,6 +19,8 @@
 
 #include "PuyoScenario.hpp"
 
+#include <SFML/Window/VideoMode.hpp>
+
 namespace {
 
 using Rng = std::default_random_engine;
@@ -40,8 +42,14 @@ class NonSequentialScenario : public Scenario {
 };
 
 class ForeverPop final : public NonSequentialScenario {
-    void setup(Params &) override
-        { m_rng = Rng { std::random_device()() }; }
+    void setup(Params & params) override {
+        // need to disable score board somehow
+        auto screen_width  = sf::VideoMode::getDesktopMode().width;
+        auto screen_height = sf::VideoMode::getDesktopMode().height;
+        params.board_width  = (screen_width  / (k_block_size*3)) - 3;
+        params.board_height = (screen_height / (k_block_size*3));
+        m_rng = Rng { std::random_device()() };
+    }
 
     Response on_turn_change() override;
 

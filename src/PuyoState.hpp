@@ -45,6 +45,7 @@ public:
         m_current_scenario(std::move(sptr))
     {}
 private:
+    static constexpr const int k_max_possible_score = 999999;
     using UpdateFunc = void(PuyoState::*)(double);
 
     void setup_board(const Settings &) override;
