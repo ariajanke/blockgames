@@ -3,7 +3,7 @@ CONFIG  -= c++11
 
 QMAKE_CXXFLAGS += -std=c++17 -pedantic -Wall
 QMAKE_LFLAGS   += -std=c++17
-LIBS           += -lsfml-graphics -lsfml-window -lsfml-system -lksg -lcommon-d \
+LIBS           += -lsfml-graphics -lsfml-window -lsfml-system -lksg -lcommon \
                   -lX11 \ # -ldiscord_game_sdk \
                   -L/usr/lib/x86_64-linux-gnu -L$$PWD/../lib/cul -L$$PWD/../lib/ksg
                   -L$$PWD/../../ext/discord-sdk/lib/x86_64

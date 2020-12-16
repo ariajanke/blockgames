@@ -18,6 +18,7 @@
 *****************************************************************************/
 
 #include "Settings.hpp"
+#include "PuyoScenario.hpp"
 
 #include <fstream>
 
@@ -26,7 +27,17 @@
 namespace {
 
 using Board = Settings::Board;
-
+#if 0
+// free play scenarios only!
+const auto k_builtin_puyo_scenario_count = []() {
+    int count = 0;
+    for (auto & uptr : Scenario::make_all_scenarios()) {
+        if (uptr->is_sequential()) break;
+        ++count;
+    }
+    return count;
+}();
+#endif
 } // end of <anonymous> namespace
 
 static void     save_i8 (std::ostream &, int8_t);
@@ -42,14 +53,27 @@ static void  save_board(std::ostream &, const Board &);
 static Board load_board(std::istream &);
 
 Settings::Settings() {
+    assert(Scenario::k_freeplay_scenario_count <= std::numeric_limits<int8_t>::max());
+    m_puyo_scenarios.resize(Scenario::k_freeplay_scenario_count);
+    std::vector<Puyo> puyo_scenarios;
     try {
         std::ifstream fin;
         fin.open(k_settings_filename);
         // settings are not meant to be transferred between machines
-        Puyo puyo;
-        static_cast<Board &>(puyo) = load_board(fin);
-        puyo.fall_speed      = load_f32(fin);
-        puyo.pop_requirement = load_i8(fin);
+        auto scen_count = load_i8(fin);
+        if (scen_count != Scenario::k_freeplay_scenario_count) {
+            // do not load (invalidate) if scenario numbers do not match
+            // (shouldn't I tell the user at some point?)
+            return;
+        }
+
+        puyo_scenarios.resize(scen_count);
+        for (auto & board : puyo_scenarios) {
+            static_cast<Board &>(board) = load_board(fin);
+            board.fall_speed      = load_f32(fin);
+            board.pop_requirement = load_i8(fin);
+        }
+        default_puyo_freeplay_scenario = load_i8(fin);
 
         Tetris tetris;
         static_cast<Board &>(tetris) = load_board(fin);
@@ -59,9 +83,11 @@ Settings::Settings() {
         SameGame samegame;
         static_cast<Board &>(samegame) = load_board(fin);
         samegame.gameover_on_singles = load_i8(fin) != 0;
+
     }  catch (...) {
         //
     }
+    m_puyo_scenarios.swap(puyo_scenarios);
 }
 
 Settings::~Settings()
@@ -83,14 +109,28 @@ PolyominoEnabledSet enable_tetromino_only() {
     return rv;
 }
 
+Settings::Puyo & Settings::get_puyo_scenario(int idx)
+    { return m_puyo_scenarios.at(std::size_t(idx)); }
+
+const Settings::Puyo & Settings::get_puyo_scenario(int idx) const
+    { return m_puyo_scenarios.at(std::size_t(idx)); }
+
+int Settings::puyo_scenario_count() const
+    { return int(m_puyo_scenarios.size()); }
+
 void save_settings(const Settings & settings) noexcept {
     try {
         std::ofstream fout;
         fout.open(k_settings_filename);
         // settings are not meant to be transferred between machines
-        save_board(fout, settings.puyo);
-        save_f32(fout, float(settings.puyo.fall_speed));
-        save_i8(fout, int8_t(settings.puyo.pop_requirement));
+        assert(settings.puyo_scenario_count() <= std::numeric_limits<int8_t>::max());
+        save_i8(fout, settings.puyo_scenario_count());
+        for (auto & board : make_puyo_settings_view(settings)) {
+            save_board(fout, board);
+            save_f32(fout, float(board.fall_speed));
+            save_i8 (fout, int8_t(board.pop_requirement));
+        }
+        save_i8(fout, settings.default_puyo_freeplay_scenario);
 
         save_board(fout, settings.tetris);
         save_f32(fout, settings.tetris.fall_speed);

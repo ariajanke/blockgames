@@ -27,16 +27,21 @@
 
 #include <cassert>
 
-using Rng = std::default_random_engine;
-#if 0
 namespace {
 
+using Rng = std::default_random_engine;
+
+template <typename T, bool (*del_f)(const T &)>
+void remove_from_container(std::vector<T> &);
+
+#if 0
 [[deprecated]] void render_blocks
     (const ConstSubGrid<int> &, const sf::Texture &, sf::RenderTarget &,
      bool do_block_merging);
 
-} // end of <anonymous> namespace
 #endif
+} // end of <anonymous> namespace
+
 void FallEffectsFull::restart() {
     m_fall_effects.clear();
     start();
@@ -167,42 +172,58 @@ void FallEffectsFull::do_fall_in
         target.draw(brush, states);
     }
     brush.setPosition(0.f, 0.f);
-    (m_render_merged ? render_merged_blocks : render_blocks)(m_blocks_copy, brush, target);
+    using Fp = void(*)(const ConstSubGrid<int> &, const sf::Sprite &,
+    sf::RenderTarget &);
+    (m_render_merged ? Fp(render_merged_blocks) : Fp(render_blocks))(m_blocks_copy, brush, target);
 }
 
 // ----------------------------------------------------------------------------
 
+/* static */ const VectorD PopEffectsPartial::CharEffect::k_velocity(0, -33);
+
 void PopEffectsPartial::update(double et) {
+#   if 0
     static const auto is_flash_effect_done = [](const FlashEffect & effect)
         { return effect.remaining <= 0.; };
-
+#   endif
     for (auto & effect : m_flash_effects) {
         effect.remaining -= et;
-        if (is_flash_effect_done(effect)) {
+        if (ready_to_delete(effect)) {
             spawn_piece_effects(effect);
         }
     }
 
+#   if 0
     m_flash_effects.erase(
         std::remove_if(m_flash_effects.begin(), m_flash_effects.end(), is_flash_effect_done),
         m_flash_effects.end());
-
+#   endif
     static const VectorD k_gravity(0, PieceEffect::k_gravity);
     for (auto & effect : m_piece_effects) {
         effect.velocity += k_gravity*et;
         effect.location += effect.velocity*et;
         effect.remaining -= et;
     }
-
+#   if 0
     static const auto is_piece_effect_done = [](const PieceEffect & effect)
         { return effect.remaining <= 0.; };
     m_piece_effects.erase(
         std::remove_if(m_piece_effects.begin(), m_piece_effects.end(), is_piece_effect_done),
         m_piece_effects.end());
+#   endif
+
+    for (auto & effect : m_char_effects) {
+        effect.remaining -= et;
+        effect.location += et*CharEffect::k_velocity;
+    }
+
+    remove_from_container<FlashEffect, ready_to_delete>(m_flash_effects);
+    remove_from_container<PieceEffect, ready_to_delete>(m_piece_effects);
+    remove_from_container<CharEffect , ready_to_delete>(m_char_effects );
 }
 
 bool PopEffectsPartial::has_effects() const {
-    return !m_flash_effects.empty() || !m_piece_effects.empty();
+    return !m_flash_effects.empty() || !m_piece_effects.empty() || !m_char_effects.empty();
 }
 
 /* protected */ void PopEffectsPartial::start() {
@@ -227,6 +248,24 @@ bool PopEffectsPartial::has_effects() const {
     m_blocks_copy(at) = decay_block(m_blocks_copy(at));
 }
 
+/* protected */ void PopEffectsPartial::post_number(VectorI at, int delta) {
+    auto delta_string = (delta < 0 ? "-" : "+") + std::to_string(delta);
+    auto char_width = texture_rect_for_char('+').width;
+    auto width = int(delta_string.size())*char_width;
+    auto height = texture_rect_for_char('+').height;
+    auto start = at*k_block_size + VectorI(1, 1)*char_width - VectorI(width, height)/2;
+    for (auto c : delta_string) {
+        CharEffect effect;
+#       if 0
+        //effect.texture_offset = VectorI(texture_rect_for_char(c).left, texture_rect_for_char(c).top);
+#       endif
+        effect.identity = c;
+        effect.location = VectorD(start);
+        start.x += char_width;
+        m_char_effects.push_back(effect);
+    }
+}
+
 /* private */ void PopEffectsPartial::draw
     (sf::RenderTarget & target, sf::RenderStates states) const
 {
@@ -239,6 +278,9 @@ bool PopEffectsPartial::has_effects() const {
     }
     for (const auto & effect : m_piece_effects) {
         draw_piece_effect(target, states, effect);
+    }
+    for (const auto & effect : m_char_effects) {
+        draw_char_effect(target, states, effect);
     }
 }
 
@@ -266,16 +308,16 @@ bool PopEffectsPartial::has_effects() const {
      const PieceEffect & effect) const
 {
     static const auto get_decayed_color = [](const PieceEffect & effect) {
-        static constexpr const auto k_init_rem = PieceEffect::k_init_remaining;
+        //static constexpr const auto k_init_rem = PieceEffect::k_init_remaining;
         int darken_amount = int(std::round(
-            ((k_init_rem - effect.remaining) / k_init_rem)*200
+            ((k_init_remaining - effect.remaining) / k_init_remaining)*200
         ));
         assert(darken_amount + 55 <= 255);
         sf::Color rv = effect.color;
         rv.r = std::max(0, rv.r - darken_amount);
         rv.g = std::max(0, rv.g - darken_amount);
         rv.b = std::max(0, rv.b - darken_amount);
-        rv.a = int(std::round((effect.remaining / k_init_rem)*200)) + 55;
+        rv.a = int(std::round((effect.remaining / k_init_remaining)*200)) + 55;
         return rv;
     };
     assert(effect.block_id != k_empty_block);
@@ -292,6 +334,17 @@ bool PopEffectsPartial::has_effects() const {
     spt.setPosition(sf::Vector2f(effect.location));
     spt.setColor(color);
     target.draw(spt, states);
+}
+
+/* private */ void PopEffectsPartial::draw_char_effect
+    (sf::RenderTarget & target, sf::RenderStates states,
+     const CharEffect & effect) const
+{
+    sf::Sprite brush;
+    brush.setTexture(*m_texture);
+    brush.setTextureRect(texture_rect_for_char(effect.identity));
+    brush.setPosition(sf::Vector2f(effect.location));
+    target.draw(brush, states);
 }
 
 /* private */ void PopEffectsPartial::spawn_piece_effects
@@ -379,7 +432,10 @@ void render_blocks
     }
 }
 #endif
-// ----------------------------------------------------------------------------
 
+template <typename T, bool (*del_f)(const T &)>
+void remove_from_container(std::vector<T> & cont) {
+    cont.erase(std::remove_if(cont.begin(), cont.end(), del_f), cont.end());
+}
 
 } // end of <anonymous> namespace

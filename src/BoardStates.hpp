@@ -33,6 +33,14 @@ class BoardState : public AppState, public PlayControlEventReceiver {
 public:
     using BoardOptions = Settings::Board;
 
+    static void draw_fill_with_background
+        (sf::RenderTarget &, int board_width, int board_height,
+         VectorI offset = VectorI(), sf::Color mask = sf::Color::White);
+
+    static void draw_fill_with_score_background
+        (sf::RenderTarget &, int board_width, int board_height,
+         VectorI offset = VectorI());
+
 protected:
     using Rng       = std::default_random_engine;
     using IntDistri = std::uniform_int_distribution<int>;
@@ -59,13 +67,6 @@ protected:
 
     void set_max_colors(int);
 
-    static void draw_fill_with_background
-        (sf::RenderTarget &, int board_width, int board_height,
-         VectorI offset = VectorI(), sf::Color mask = sf::Color::White);
-
-    static void draw_fill_with_score_background
-        (sf::RenderTarget &, int board_width, int board_height,
-         VectorI offset = VectorI());
 private:
     int m_max_colors = k_min_colors;
     PlayControlEventHandler m_pc_handler;

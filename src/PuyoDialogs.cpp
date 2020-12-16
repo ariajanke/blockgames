@@ -27,7 +27,7 @@
 #include <cstring>
 #include <cassert>
 
-void PuyoDialog::setup_() {
+/* private */ void PuyoSettingsDialog::setup_() {
     set_title(U"Puyo Clone (Free Play) Setting");
     set_drag_enabled(false);
 
@@ -38,28 +38,28 @@ void PuyoDialog::setup_() {
     static constexpr const int k_max_pop_req = 12;
 
     m_pop_req_slider.set_options(number_range_to_strings(k_min_pop_req, k_max_pop_req));
-    m_pop_req_slider.select_option(settings().puyo.pop_requirement - k_min_pop_req);
+    m_pop_req_slider.select_option(puyo_settings().pop_requirement - k_min_pop_req);
 
     m_pop_req_slider.set_option_change_event([this]() {
-        settings().puyo.pop_requirement = int(m_pop_req_slider.selected_option_index()) + k_min_pop_req;
+        puyo_settings().pop_requirement = int(m_pop_req_slider.selected_option_index()) + k_min_pop_req;
     });
 
     m_fall_speed_text.set_width(200.f);
-    auto num = to_ustring(std::to_string(settings().puyo.fall_speed));
-    m_fall_speed_text.set_string(to_ustring(std::to_string(settings().puyo.fall_speed)));
+    auto num = to_ustring(std::to_string(puyo_settings().fall_speed));
+    m_fall_speed_text.set_string(to_ustring(std::to_string(puyo_settings().fall_speed)));
 
     m_fall_speed_text.set_character_filter([this](const UString & ustr) {
         double out = 0.;
         if (!string_to_number(ustr, out)) return false;
-        auto rv = out > 0. && out < 10.;
-        if (rv) {
-            settings().puyo.fall_speed = out;
+        if (out > 0. && out < 10.) {
+            puyo_settings().fall_speed = out;
             std::cout << "set fall speed " << out << " bps" << std::endl;
+            return true;
         }
-        return true;
+        return false;
     });
     m_fall_speed_text.set_text_change_event([this]() {
-        string_to_number(m_fall_speed_text.string(), settings().puyo.fall_speed);
+        string_to_number(m_fall_speed_text.string(), puyo_settings().fall_speed);
     });
 
     m_back.set_press_event([this]() {
@@ -67,7 +67,7 @@ void PuyoDialog::setup_() {
     });
     m_back.set_string(U"Back to menu");
 
-    m_board_config.assign_board_options(settings().puyo);
+    m_board_config.assign_board_options(puyo_settings());
     m_board_config.setup();
 
     begin_adding_widgets(get_styles()).
@@ -76,6 +76,13 @@ void PuyoDialog::setup_() {
         add(m_board_config).add_line_seperator().
         add(m_back);
     m_board_config.set_padding(0.f);
+}
+
+/* private */ PuyoSettingsDialog::PuyoSettings & PuyoSettingsDialog::puyo_settings() {
+    if (m_scenario_index < 0 || m_scenario_index > settings().puyo_scenario_count()) {
+        throw std::runtime_error("PuyoSettingsDialog::puyo_settings: cannot access scenario's settings (invalid index)");
+    }
+    return settings().get_puyo_scenario(m_scenario_index);
 }
 
 // ----------------------------------------------------------------------------
@@ -98,19 +105,16 @@ template <ScenarioStrFunc get_str>
 TextSize get_max_dims(const sf::Font &, const ConstScenarioCont &, int char_size);
 
 UString wrap_string(const UString &);
-
+#if 0
 const ConstScenarioCont s_scenarios =
     move_and_convert<ConstScenarioPtr>(Scenario::make_all_scenarios());
-
+#endif
 } // end of <anonymous> namespace
 
 /* private */ void PuyoScenarioDialog::setup_() {
+    const auto & s_scenarios = Scenario::get_all_scenarios();
     set_title(U"Scenario Select");
     set_drag_enabled(false);
-#   if 0
-    m_title.set_character_size(24.f);
-    m_title.set_string(U"Scenario Select");
-#   endif
     m_scen_select_notice.set_string(
         U"When you select a free play scanario, it will become the scenario\n"
          "you play when you click \"Free Play\" on the main menu.");
@@ -119,12 +123,12 @@ const ConstScenarioCont s_scenarios =
     const sf::Font & font = get_global_font(get_styles());
 
     m_name_notice.set_string(U"Name:");
-    m_name_notice.set_character_size(22);
+    m_name_notice.set_character_size(24);
     auto sz = get_max_dims<&Scenario::name>(font, s_scenarios, k_char_size);
     m_name.set_size(sz.width, sz.height);
 
     m_desc_notice.set_string(U"Description:");
-    m_desc_notice.set_character_size(22);
+    m_desc_notice.set_character_size(24);
     sz = get_max_dims<&Scenario::description>(font, s_scenarios, k_char_size);
     m_desc.set_size(sz.width, sz.height);
 
@@ -134,7 +138,19 @@ const ConstScenarioCont s_scenarios =
 
     m_play.set_string(U"Play");
     m_play.set_press_event([this]() {
-        set_next_state(std::make_unique<PuyoState>(get_selected_scenario().clone()));
+        auto scen_clone = get_selected_scenario().clone();
+        if (!scen_clone->is_sequential()) {
+            settings().default_puyo_freeplay_scenario = int(m_scenario_slider.selected_option_index());
+        }
+        set_next_state(std::make_unique<PuyoStateN>(std::move(scen_clone)));
+    });
+
+    m_settings.set_string(U"Settings");
+    m_settings.set_press_event([this]() {
+        if (get_selected_scenario().is_sequential()) {
+            throw std::runtime_error("Cannot set settings for a sequential scenario. Settings are only for free play.");
+        }
+        set_next_state(make_dialog<PuyoSettingsDialog>(int(m_scenario_slider.selected_option_index())));
     });
 
     {
@@ -159,16 +175,15 @@ const ConstScenarioCont s_scenarios =
 
     flip_to_scenario();
     begin_adding_widgets(get_styles()).
-#       if 0
-        add_horizontal_spacer().add(m_title).add_horizontal_spacer().add_line_seperator().
-#       endif
         add(m_scen_select_notice).add_line_seperator().
         add(m_name_notice).add_line_seperator().
-        /*add_horizontal_spacer().*/add(m_name).add_line_seperator().
+        add(m_name).add_line_seperator().
         add(m_desc_notice).add_line_seperator().
-        /*add_horizontal_spacer().*/add(m_desc).add_line_seperator().
+        add(m_desc).add_line_seperator().
         add(m_scenario_slider).add_line_seperator().
-        add(m_back).add_horizontal_spacer().add(m_play).add_horizontal_spacer().add_horizontal_spacer().add_horizontal_spacer();
+        add(m_back).add_horizontal_spacer().add(m_play)
+            .add_horizontal_spacer().add_horizontal_spacer().add_horizontal_spacer()
+            .add(m_settings);
 }
 
 /* private */ void PuyoScenarioDialog::flip_to_scenario() {
@@ -176,16 +191,21 @@ const ConstScenarioCont s_scenarios =
     assert(strlen(scen.name()) <= k_wrap_limit);
     m_name.set_string(            to_ustring(scen.name       ()) );
     m_desc.set_string(wrap_string(to_ustring(scen.description())));
+
+    m_settings.set_visible(!scen.is_sequential());
+#   if 0
     if (!scen.is_sequential()) {
-        settings().puyo.scenario_number = int(m_scenario_slider.selected_option_index());
+        //settings().puyo.scenario_number = int(m_scenario_slider.selected_option_index());
+
     }
+#   endif
 }
 
 /* private */ const Scenario & PuyoScenarioDialog::get_selected_scenario() const
-    { return *s_scenarios.at(m_scenario_slider.selected_option_index()); }
+    { return *Scenario::get_all_scenarios().at(m_scenario_slider.selected_option_index()); }
 
 namespace {
-
+#if 0
 template <typename T, typename U>
 std::vector<T> move_and_convert(std::vector<U> && cont) {
     using std::move;
@@ -194,7 +214,7 @@ std::vector<T> move_and_convert(std::vector<U> && cont) {
     for (auto & scen : cont) rv.emplace_back(move(scen));
     return rv;
 }
-
+#endif
 
 const sf::Font & get_global_font(const ksg::StyleMap & style_map) {
     static const char * const k_no_font_msg = "lmao where's the font?";

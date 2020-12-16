@@ -63,3 +63,11 @@ void render_blocks
 
 void render_merged_blocks
     (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &);
+
+void render_blocks
+    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &,
+     sf::RenderStates);
+
+void render_merged_blocks
+    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &,
+     sf::RenderStates);

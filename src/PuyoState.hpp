@@ -36,11 +36,256 @@ using ConstScenarioPtr = ScenarioPriv::ConstUPtr;
 
 ConstScenarioPtr move(ScenarioPtr &);
 
+// ScoreBoardBase                               <--*
+// Base <- Pause (features) <- Basic (features) <--+-- With Score Board
+//                                              <--- Without Score Board
+
+class BoardBase : public sf::Drawable {
+public:
+    int width() const { return blocks().width(); }
+    int height() const { return blocks().height(); }
+
+    virtual const BlockGrid & blocks() const = 0;
+    virtual void update(double et) = 0;
+
+    virtual void handle_event(PlayControlEvent) = 0;
+
+protected:
+    BoardBase() {}
+    virtual ~BoardBase() {}
+};
+
+// copy of: PauseableWithFallingPieceState
+// I'm going to adopt it here for puyo state *before* implementing it anywhere
+// else
+class PauseableBoard : public BoardBase {
+public:
+    static constexpr const double k_fast_fall  = 5.;
+    static constexpr const double k_slow_fall  = 1.;
+    static constexpr const double k_move_delay = 1. / 8.;
+
+    void update(double et) override;
+
+    void handle_event(PlayControlEvent) override;
+
+    void assign_pause_pointer(bool & bptr) { m_pause_ptr = &bptr; }
+
+protected:
+    PauseableBoard() {}
+
+    virtual FallingPieceBase & piece_base() = 0;
+#   if 0
+    bool is_paused() const { return m_is_paused; }
+#   endif
+    double fall_multiplier() const { return m_fall_multiplier; }
+
+private:
+    static constexpr const auto k_niether_dir = PlayControlId::count;
+    double m_fall_multiplier = 1.;
+    double m_move_time = 0.;
+    PlayControlId m_move_dir = k_niether_dir;
+#   if 0
+    bool m_is_paused = false;
+#   endif
+    bool * m_pause_ptr = nullptr;
+};
+
+class PuyoScoreBoardBase {
+public:
+    static constexpr const int k_not_any_board = -1;
+    virtual void increment_score(int board, int delta) = 0;
+    virtual void reset_score(int board) = 0;
+    virtual void set_next_pair(int board, int first, int second) = 0;
+    virtual ~PuyoScoreBoardBase() {}
+
+    static PuyoScoreBoardBase & null_instance() {
+        class NullScoreBoard final : public PuyoScoreBoardBase {
+            void increment_score(int, int) override {}
+            void reset_score(int) override {}
+            void set_next_pair(int, int, int) override {}
+        };
+        static NullScoreBoard inst;
+        return inst;
+    }
+};
+
+// doesn't know what a scenario is *at all*
+// however methods exist so that it can be driven by one
+// also doesn't know how to render/treat the score board
+// but, it can talk to one
+// no concept of location, but render states transformations are available
+class PuyoBoard final : public PauseableBoard {
+public:
+    static const std::pair<int, int> k_empty_pair;
+    static constexpr const int k_init_pop_requirement = 4;
+
+    void assign_score_board(int this_board_number, PuyoScoreBoardBase &);
+    void set_settings(double fall_speed, int pop_requirement);
+    void set_size(int width, int height);
+
+    void update(double) override;
+    void push_falling_piece(int first, int second);
+    void push_fall_in_blocks(const BlockGrid &);
+
+    bool is_ready() const;
+    bool is_gameover() const;
+
+    const BlockGrid & blocks() const override { return m_blocks; }
+    auto blocks() { return make_sub_grid(m_blocks); }
+
+private:
+    using UpdateFunc = void(PuyoBoard::*)(double);
+
+    void draw(sf::RenderTarget &, sf::RenderStates) const override;
+
+    FallingPieceBase & piece_base() override { return m_piece; }
+
+    void update_piece(double);
+    void update_pop_effects(double);
+    void update_fall_effects(double);
+    void update_on_gameover(double);
+
+    PuyoScoreBoardBase * m_score_board = &PuyoScoreBoardBase::null_instance();
+    int m_score_board_number = PuyoScoreBoardBase::k_not_any_board;
+
+    FallingPiece m_piece;
+    std::pair<int, int> m_next_piece = k_empty_pair;
+    UpdateFunc m_update_func = &PuyoBoard::update_fall_effects;
+    double m_fall_delay = 0.5;
+    double m_fall_time  = 0.;
+
+    BlockGrid m_blocks;
+    FallEffectsFull m_fef;
+    PuyoPopEffects m_pef;
+
+    int m_pop_requirement = k_init_pop_requirement;
+};
+
+class PuyoScoreBoard final : public PuyoScoreBoardBase, public sf::Drawable {
+public:
+    static constexpr const int k_max_possible_score = 999999;
+    void increment_score(int board, int delta) override;
+    void reset_score(int board) override;
+    void set_next_pair(int board, int first, int second) override;
+
+private:
+    void draw(sf::RenderTarget &, sf::RenderStates) const override;
+
+    std::pair<int, int> m_next_piece = PuyoBoard::k_empty_pair;
+    int m_first_player_score = 0;
+};
+
+// ----------------------------------------------------------------------------
+
+inline void PauseableBoard::update(double et) {
+#   if 0
+    if (is_paused()) return;
+#   endif
+    if (m_move_dir == k_niether_dir) {
+        m_move_time = 0.;
+        return;
+    }
+    if ((m_move_time += et) >= k_move_delay) {
+        switch (m_move_dir) {
+        case PlayControlId::left:
+            piece_base().move_left(blocks());
+            break;
+        case PlayControlId::right:
+            piece_base().move_right(blocks());
+            break;
+        default:
+            throw std::runtime_error("PauseableWithFallingPieceState::update: "
+                                     "m_move_dir must be either right, left, or count.");
+        }
+        m_move_time = 0.;
+    }
+    m_move_dir = k_niether_dir;
+}
+
+inline void PauseableBoard::handle_event(PlayControlEvent event) {
+    if (m_pause_ptr) {
+        if (event.id != PlayControlId::pause && *m_pause_ptr) return;
+    }
+    if (event.state == PlayControlState::just_pressed) {
+        switch (event.id) {
+        case PlayControlId::left:
+            if (m_move_time == 0.)
+                piece_base().move_left(blocks());
+            break;
+        case PlayControlId::right:
+            if (m_move_time == 0.)
+                piece_base().move_right(blocks());
+            break;
+        case PlayControlId::rotate_left : piece_base().rotate_left (blocks()); break;
+        case PlayControlId::rotate_right: piece_base().rotate_right(blocks()); break;
+        default: break;
+        }
+    }
+
+    if (is_pressed(event) && (   event.id == PlayControlId::left
+                              || event.id == PlayControlId::right))
+    {
+        m_move_dir = event.id;
+    }
+
+    if (   event.state == PlayControlState::just_pressed
+        && event.id    == PlayControlId   ::pause
+        && m_pause_ptr)
+    { *m_pause_ptr = !*m_pause_ptr; }
+
+    if (event.id == PlayControlId::down) {
+        m_fall_multiplier = is_pressed(event) ? 5.*(blocks().height() / 10) : 1.;
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+class PuyoStateN final : public BoardState {
+public:
+    // needed by Scenario
+    using Response = MultiType<std::pair<int, int>, BlockGrid>;
+    explicit PuyoStateN(int scenario_number);
+    explicit PuyoStateN(ScenarioPtr sptr):
+        m_current_scenario(std::move(sptr))
+    {}
+
+private:
+    int width_in_blocks () const override { return m_board.width () + 3; }
+
+    int height_in_blocks() const override { return m_board.height(); }
+
+    int scale() const override { return 3; }
+
+    void handle_event(PlayControlEvent pce) override {
+        m_board.handle_event(pce);
+    }
+
+    void update(double) override;
+
+    void setup_board(const Settings &) override;
+
+    void draw(sf::RenderTarget &, sf::RenderStates) const override;
+
+    void handle_response(const Response &);
+
+    Rng m_rng = Rng { std::random_device()() };
+    PuyoScoreBoard m_score_board;
+    PuyoBoard m_board;
+    ScenarioPtr m_current_scenario;
+    // actually state wide
+    bool m_pause = false;
+};
+#if 0
+// ----------------------------------------------------------------------------
+
 class PuyoState final : public PauseableWithFallingPieceState {
 public:
     // needed by Scenario
-    using Response = MultiType<std::pair<int, int>, Grid<int>>;
+    using Response = MultiType<std::pair<int, int>, BlockGrid>;
+#   if 0
     PuyoState() {}
+#   endif
+    explicit PuyoState(int scenario_number);
     explicit PuyoState(ScenarioPtr sptr):
         m_current_scenario(std::move(sptr))
     {}
@@ -86,3 +331,4 @@ private:
 
     int m_score = 0;
 };
+#endif

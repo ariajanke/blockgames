@@ -147,7 +147,8 @@ VectorI ColumnsPiece::bottom() const
 // ----------------------------------------------------------------------------
 
 /* private */ void ColumnsState::setup_board(const Settings & settings) {
-    const auto & conf = settings.puyo;
+    (void)settings;
+    const Settings::Puyo conf;
     m_blocks.set_size(conf.width, conf.height);
     m_fall_ef.setup(conf.width, conf.height, load_builtin_block_texture());
     m_fall_ef.set_render_blocks_merged_enabled(false);

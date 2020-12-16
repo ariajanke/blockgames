@@ -22,12 +22,13 @@
 #include "Defs.hpp"
 #include "Polyomino.hpp"
 
-constexpr const char * const k_settings_filename = "bgsettings.bin";
+constexpr const char * const k_settings_filename = "blockgamesconf.bin";
 
 PolyominoEnabledSet enable_tetromino_only();
 
 // program wide settings for various games
-struct Settings {
+class Settings {
+public:
     Settings();
     Settings(const Settings &) = delete;
     Settings(Settings &&) = delete;
@@ -49,22 +50,62 @@ struct Settings {
         Puyo();
         int pop_requirement = 4;
         double fall_speed = 1.5;
-
-        int scenario_number = k_free_play_scenario;
     };
+
     struct Tetris : public Board {
         Tetris();
         PolyominoEnabledSet enabled_polyominos = enable_tetromino_only();
         double fall_speed = 1.5;
     };
+
     struct SameGame : public Board {
         SameGame();
         bool gameover_on_singles = false;
     };
 
-    Puyo puyo;
+    Puyo & get_puyo_scenario(int);
+
+    const Puyo & get_puyo_scenario(int) const;
+
+    int puyo_scenario_count() const;
+
+    int default_puyo_freeplay_scenario = 0;
+
     Tetris tetris;
     SameGame samegame;
+private:
+    std::vector<Puyo> m_puyo_scenarios;
 };
 
+template <bool k_is_const_t>
+class PuyoSettingsView {
+public:
+    using ParentRef = std::conditional_t<k_is_const_t, const Settings &, Settings &>;
+    using Iter = std::conditional_t<k_is_const_t, const Settings::Puyo *, Settings::Puyo *>;
+
+    explicit PuyoSettingsView(ParentRef parent) {
+        m_beg = &parent.get_puyo_scenario(0);
+        m_end = m_beg + parent.puyo_scenario_count();
+    }
+
+    PuyoSettingsView(Iter beg_, Iter end_): m_beg(beg_), m_end(end_) {}
+
+    Iter begin() { return m_beg; }
+    Iter end  () { return m_end; }
+private:
+    Iter m_beg, m_end;
+};
+#if 0
+template <bool k_is_const_t>
+PuyoSettingsView<k_is_const_t> make_puyo_settings_view
+    (typename PuyoSettingsView<k_is_const_t>::ParentRef settings)
+{ return PuyoSettingsView<k_is_const_t>(settings); }
+#endif
+#if 1
+inline PuyoSettingsView<true> make_puyo_settings_view(const Settings & settings)
+    { return PuyoSettingsView<true>(settings); }
+
+inline PuyoSettingsView<false> make_puyo_settings_view(Settings & settings)
+    { return PuyoSettingsView<false>(settings); }
+#endif
 void save_settings(const Settings &) noexcept;

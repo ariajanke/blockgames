@@ -29,8 +29,18 @@
 #include <ksg/TextButton.hpp>
 #include <ksg/EditableText.hpp>
 
-class PuyoDialog final : public Dialog {
+class PuyoSettingsDialog final : public Dialog {
+public:
+    explicit PuyoSettingsDialog(int scenario_index):
+        m_scenario_index(scenario_index)
+    {}
+
+private:
+    using PuyoSettings = Settings::Puyo;
+
     void setup_() override;
+
+    PuyoSettings & puyo_settings();
 
     ksg::TextArea m_pop_req_notice;
     ksg::TextArea m_fall_speed_notice;
@@ -41,6 +51,7 @@ class PuyoDialog final : public Dialog {
     ksg::TextButton m_back;
 
     BoardConfigDialog m_board_config;
+    int m_scenario_index;
 };
 
 class PuyoScenarioDialog final : public Dialog {
@@ -48,11 +59,11 @@ class PuyoScenarioDialog final : public Dialog {
     // - sequential (unlockables)
     // - free play scenarios
     void setup_() override;
+
     void flip_to_scenario();
+
     const Scenario & get_selected_scenario() const;
-#   if 0
-    ksg::TextArea m_title;
-#   endif
+
     ksg::TextArea m_scen_select_notice;
 
     ksg::TextArea m_name_notice;
@@ -61,6 +72,7 @@ class PuyoScenarioDialog final : public Dialog {
     ksg::TextArea m_desc;
 
     ksg::TextButton m_play;
+    ksg::TextButton m_settings;
 
     ksg::OptionsSlider m_scenario_slider;
     ksg::TextButton m_back;

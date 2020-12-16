@@ -64,7 +64,7 @@ using InvArg       = std::invalid_argument;
     m_max_colors = n;
 }
 
-/* protected static */ void BoardState::draw_fill_with_background
+/* static */ void BoardState::draw_fill_with_background
     (sf::RenderTarget & target,
      int board_width, int board_height, VectorI offset, sf::Color mask)
 {
@@ -79,7 +79,7 @@ using InvArg       = std::invalid_argument;
     }}
 }
 
-/* protected static */ void BoardState::draw_fill_with_score_background
+/* static */ void BoardState::draw_fill_with_score_background
     (sf::RenderTarget & target, int board_width, int board_height,
      VectorI offset)
 {

@@ -25,16 +25,11 @@ class Scenario {
 public:
     virtual ~Scenario();
     static const std::pair<int, int> k_random_pair;
-    static constexpr const int k_use_freeplay_settings = -1;
-    using Response = PuyoState::Response;
 
-    struct Params {
-        int board_width  = k_use_freeplay_settings;
-        int board_height = k_use_freeplay_settings;
-        int max_colors   = k_use_freeplay_settings;
-    };
+    using Response = PuyoStateN::Response;
+    using PuyoSettings = Settings::Puyo;
 
-    virtual void setup(Params &) = 0;
+    virtual PuyoSettings setup(PuyoSettings) = 0;
     virtual Response on_turn_change() = 0;
     virtual const char * name() const = 0;
     virtual const char * description() const = 0;
@@ -42,7 +37,10 @@ public:
     virtual ScenarioPtr clone() const = 0;
 
     double fall_speed() const;
+#   if 0
     void assign_board(Grid<int> &);
+#   endif
+    void assign_board(SubGrid<int>);
 
     template<typename T>
     static ScenarioPtr make_scenario() {
@@ -53,20 +51,26 @@ public:
 
     static ScenarioPtr make_pop_forever();
     static ScenarioPtr make_glass_waves();
-
+private:
     /** layout guaranteed to be:
      *  is_sequential calls begin with false value then true
      *  afterward each sequential stage is in order
      */
     static std::vector<ScenarioPtr> make_all_scenarios();
+public:
+    static const std::vector<ConstScenarioPtr> & get_all_scenarios();
 
+    static const int k_freeplay_scenario_count;
 protected:
-    Grid<int> & board();
+    SubGrid<int> & board();
 
     void set_fall_speed(double);
 
 private:
     double m_fall_speed = 1.;
+    SubGrid<int> m_board_ref;
+#   if 0
     Grid<int> * m_board = nullptr;
+#   endif
 };
 

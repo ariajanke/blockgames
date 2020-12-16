@@ -266,7 +266,7 @@ void GameSelectionDialog::setup_() {
     m_freeplay.set_press_event([this]() {
         set_next_state([this]() -> std::unique_ptr<AppState> {
             switch (to_game_selection(m_game_slider.selected_option_index())) {
-            case Game::puyo_clone    : return std::make_unique<PuyoState   >();
+            case Game::puyo_clone    : return std::make_unique<PuyoStateN  >(settings().default_puyo_freeplay_scenario);
             case Game::samegame_clone: return std::make_unique<SameGame    >();
             case Game::tetris_clone  : return std::make_unique<TetrisState >();
             case Game::columns_clone : return std::make_unique<ColumnsState>();
@@ -281,17 +281,17 @@ void GameSelectionDialog::setup_() {
             set_next_state(make_dialog<PuyoScenarioDialog>());
         }
     });
-
+#   if 0
     m_settings.set_press_event([this]() {        
         switch (to_game_selection(m_game_slider.selected_option_index())) {
-        case Game::puyo_clone    : set_next_state(make_dialog<PuyoDialog           >()); break;
+        case Game::puyo_clone    : set_next_state(make_dialog<PuyoSettingsDialog           >()); break;
         case Game::tetris_clone  : set_next_state(make_dialog<PolyominoSelectDialog>()); break;
         case Game::samegame_clone: set_next_state(make_dialog<SameGameDialog       >()); break;
         case Game::columns_clone : set_next_state(make_dialog<ColumnsSettingsDialog>()); break;
         default: break;
         }
     });
-
+#   endif
     m_exit.set_press_event([this]()
         { set_next_state(std::make_unique<QuitState>()); });
 

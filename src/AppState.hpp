@@ -24,7 +24,7 @@
 
 #include <memory>
 
-struct Settings;
+class Settings;
 
 namespace sf { class Event; }
 

@@ -80,6 +80,7 @@ public:
     void update(double et);
 
     bool has_effects() const;
+
 protected:
     PopEffectsPartial() {}
     ~PopEffectsPartial() override {}
@@ -90,18 +91,20 @@ protected:
     void start() override;
     void finish() override;
     void post_pop_effect(VectorI at, int color) override;
+    void post_number(VectorI at, int);
+
 private:
+    static constexpr const double k_init_remaining = .33;
+
     struct FlashEffect {
-        static constexpr const double k_init_remaining = .33;
         double remaining = k_init_remaining;
         int block_id = k_empty_block;
         VectorI at;
     };
 
     struct PieceEffect {
-        static constexpr const double k_init_remaining = 0.33;
-        static constexpr const double k_init_speed     = 75.;
-        static constexpr const double k_gravity        = 533.;
+        static constexpr const double k_init_speed = 75.;
+        static constexpr const double k_gravity    = 533.;
         int block_id = k_empty_block;
         VectorD velocity;
         VectorD location;
@@ -110,19 +113,38 @@ private:
         VectorI texture_offset;
     };
 
+    struct CharEffect {
+        static const VectorD k_velocity;
+        VectorD location;
+#       if 0
+        //VectorI texture_offset;
+#       endif
+        char identity;
+        double remaining = k_init_remaining;
+    };
+
+    static bool ready_to_delete(const FlashEffect & ef) { return ef.remaining <= 0.; }
+    static bool ready_to_delete(const PieceEffect & ef) { return ef.remaining <= 0.; }
+    static bool ready_to_delete(const CharEffect  & ef) { return ef.remaining <= 0.; }
+
     static sf::Color brighten_by(sf::Color c, const FlashEffect & effect) {
-        static constexpr const auto k_init_rem = FlashEffect::k_init_remaining;
-        return brighten_color(c, (k_init_rem - effect.remaining) / k_init_rem);
+#       if 0
+        //static constexpr const auto k_init_rem = k_init_remaining;
+#       endif
+        return brighten_color(c, (k_init_remaining - effect.remaining) / k_init_remaining);
     }
 
     void draw(sf::RenderTarget &, sf::RenderStates) const override;
 
     void draw_flash_effect(sf::RenderTarget &, sf::RenderStates, const FlashEffect &) const;
     void draw_piece_effect(sf::RenderTarget &, sf::RenderStates, const PieceEffect &) const;
+    void draw_char_effect (sf::RenderTarget &, sf::RenderStates, const CharEffect  &) const;
+
     void spawn_piece_effects(const FlashEffect &);
 
     std::vector<FlashEffect> m_flash_effects;
     std::vector<PieceEffect> m_piece_effects;
+    std::vector<CharEffect > m_char_effects ;
 
     Grid<int> m_blocks_copy;
     std::default_random_engine m_rng = std::default_random_engine { std::random_device()() };
@@ -136,6 +158,8 @@ public:
     bool do_pop(Grid<int> & grid, int pop_requirement) {
         set_internal_grid_copy(grid);
         ++m_wave_number;
+        m_group_number = 0;
+        m_pop_requirement = pop_requirement;
         return pop_connected_blocks(grid, pop_requirement, *this);
     }
 
@@ -149,11 +173,28 @@ private:
     void post_pop_effect(VectorI at, int color) override {
         PopEffectsPartial::post_pop_effect(at, color);
         if (!is_block_color(color)) return;
-        m_score_delta += m_wave_number;
+    }
+
+    void post_group(const std::vector<VectorI> & group_locations) override {
+        VectorI avg_tile;
+        int group_size = int(group_locations.size());
+        for (auto v : group_locations) avg_tile += v;
+        avg_tile.x /= group_size;
+        avg_tile.y /= group_size;
+        int delta = group_size*m_wave_number;
+        if (group_size > m_pop_requirement) {
+            delta += group_size / m_pop_requirement;
+        }
+        delta += m_group_number;
+        ++m_group_number;
+        post_number(avg_tile, delta);
+        m_score_delta += delta;
     }
 
     int m_wave_number = 0;
     int m_score_delta = 0;
+    int m_pop_requirement = 0;
+    int m_group_number = 0;
 };
 
 // ----------------------------------------------------------------------------
@@ -179,6 +220,8 @@ public:
         finish();
 
     }
+private:
+    void post_group(const std::vector<VectorI> &) override {}
 };
 
 // ----------------------------------------------------------------------------

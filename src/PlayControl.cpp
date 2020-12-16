@@ -28,7 +28,7 @@ static PlayControlState update_state(PlayControlState old_state, bool is_press) 
         return is_press ? PlayControlState::still_pressed : PlayControlState::still_released;
     }
     return is_press ? PlayControlState::just_pressed : PlayControlState::just_released;
-};
+}
 
 PlayControlEventReceiver::~PlayControlEventReceiver() {}
 

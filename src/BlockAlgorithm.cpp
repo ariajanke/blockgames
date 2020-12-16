@@ -137,6 +137,7 @@ void make_all_blocks_fall_out(SubGrid<int> blocks, FallBlockEffects & effects) {
         void start() override {}
         void finish() override {}
         void post_pop_effect(VectorI, int) override {}
+        void post_group(const std::vector<VectorI> &) override {}
     };
     static NullPopEffects inst;
     return inst;
@@ -193,18 +194,19 @@ bool pop_connected_blocks
     explored.set_size(grid.width(), grid.height());
 
     for (VectorI r; r != grid.end_position(); r = grid.next(r)) {
-        if (grid(r) == 0) continue;
+        if (grid(r) == k_empty_block) continue;
         selections.clear();
         selections.push_back(r);
         select_connected_blocks(grid, selections, explored);
-        if (int(selections.size()) >= amount_required) {
-            any_popped = true;
-            for (auto u : selections) {
-                pop_special_neighbors(grid, u, effects);
-                effects.post_pop_effect(u, grid(u));
-                grid(u) = 0;
-            }
+        if (int(selections.size()) < amount_required) continue;
+
+        any_popped = true;
+        for (auto u : selections) {
+            pop_special_neighbors(grid, u, effects);
+            effects.post_pop_effect(u, grid(u));
+            grid(u) = k_empty_block;
         }
+        effects.post_group(selections);
     }
     return any_popped;
 }

@@ -52,7 +52,7 @@ sf::IntRect to_tile_rect(VectorI loc);
 
 void render_blocks
     (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &,
-     bool do_block_merging);
+     bool do_block_merging, sf::RenderStates = sf::RenderStates::Default);
 
 } // end of <anonymous> namespace
 
@@ -212,6 +212,20 @@ void render_merged_blocks
     render_blocks(blocks, brush, target, true);
 }
 
+void render_blocks
+    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush,
+     sf::RenderTarget & target, sf::RenderStates states)
+{
+    render_blocks(blocks, brush, target, false, states);
+}
+
+void render_merged_blocks
+    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush,
+     sf::RenderTarget & target, sf::RenderStates states)
+{
+    render_blocks(blocks, brush, target, true, states);
+}
+
 namespace {
 
 void add_edge_masks(SubGrid<sf::Color>);
@@ -318,7 +332,8 @@ sf::IntRect to_tile_rect(VectorI loc) {
 
 void render_blocks
     (const ConstSubGrid<int> & blocks, const sf::Sprite & brush_,
-     sf::RenderTarget & target, bool do_block_merging)
+     sf::RenderTarget & target, bool do_block_merging,
+     sf::RenderStates states)
 {
     sf::Sprite brush = brush_;
 
@@ -333,7 +348,7 @@ void render_blocks
             return texture_rect_for(blocks(r), edges);
         }());
 
-        target.draw(brush);
+        target.draw(brush, states);
     }
 }
 

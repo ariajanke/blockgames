@@ -51,6 +51,7 @@ public:
     virtual void start() = 0;
     virtual void finish() = 0;
     virtual void post_pop_effect(VectorI at, int block_id) = 0;
+    virtual void post_group(const std::vector<VectorI> & group_locations) = 0;
 protected:
     PopEffects() {}
     virtual ~PopEffects();
