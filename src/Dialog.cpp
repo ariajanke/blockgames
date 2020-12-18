@@ -266,7 +266,10 @@ void GameSelectionDialog::setup_() {
     m_freeplay.set_press_event([this]() {
         set_next_state([this]() -> std::unique_ptr<AppState> {
             switch (to_game_selection(m_game_slider.selected_option_index())) {
+#           if 0
             case Game::puyo_clone    : return std::make_unique<PuyoStateN  >(settings().default_puyo_freeplay_scenario);
+#           endif
+            case Game::puyo_clone    : return std::make_unique<PuyoStateVS >();
             case Game::samegame_clone: return std::make_unique<SameGame    >();
             case Game::tetris_clone  : return std::make_unique<TetrisState >();
             case Game::columns_clone : return std::make_unique<ColumnsState>();

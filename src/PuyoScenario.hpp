@@ -27,6 +27,7 @@ public:
     static const std::pair<int, int> k_random_pair;
 
     using Response = PuyoStateN::Response;
+    using ContinueFall = PuyoStateN::ContinueFall;
     using PuyoSettings = Settings::Puyo;
 
     virtual PuyoSettings setup(PuyoSettings) = 0;

@@ -35,7 +35,67 @@ std::string pad_to_right(std::string &&, int);
 
 // ----------------------------------------------------------------------------
 
-const std::pair<int, int> PuyoBoard::k_empty_pair = std::make_pair(k_empty_block, k_empty_block);
+void PauseableBoard::update(double et) {
+    if (m_move_dir == k_niether_dir) {
+        m_move_time = 0.;
+        return;
+    }
+    if ((m_move_time += et) >= k_move_delay) {
+        switch (m_move_dir) {
+        case PlayControlId::left:
+            piece_base().move_left(blocks());
+            break;
+        case PlayControlId::right:
+            piece_base().move_right(blocks());
+            break;
+        default:
+            throw std::runtime_error("PauseableWithFallingPieceState::update: "
+                                     "m_move_dir must be either right, left, or count.");
+        }
+        m_move_time = 0.;
+    }
+    m_move_dir = k_niether_dir;
+}
+
+void PauseableBoard::handle_event(PlayControlEvent event) {
+    if (m_pause_ptr) {
+        if (event.id != PlayControlId::pause && *m_pause_ptr) return;
+    }
+    if (event.state == PlayControlState::just_pressed) {
+        switch (event.id) {
+        case PlayControlId::left:
+            if (m_move_time == 0.)
+                piece_base().move_left(blocks());
+            break;
+        case PlayControlId::right:
+            if (m_move_time == 0.)
+                piece_base().move_right(blocks());
+            break;
+        case PlayControlId::rotate_left : piece_base().rotate_left (blocks()); break;
+        case PlayControlId::rotate_right: piece_base().rotate_right(blocks()); break;
+        default: break;
+        }
+    }
+
+    if (is_pressed(event) && (   event.id == PlayControlId::left
+                              || event.id == PlayControlId::right))
+    {
+        m_move_dir = event.id;
+    }
+
+    if (   event.state == PlayControlState::just_pressed
+        && event.id    == PlayControlId   ::pause
+        && m_pause_ptr)
+    { *m_pause_ptr = !*m_pause_ptr; }
+
+    if (event.id == PlayControlId::down) {
+        m_fall_multiplier = is_pressed(event) ? 5.*(blocks().height() / 10) : 1.;
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+const std::pair<int, int> BoardBase::k_empty_pair = std::make_pair(k_empty_block, k_empty_block);
 
 void PuyoBoard::set_size(int width, int height) {
     m_blocks.clear();
@@ -60,6 +120,7 @@ void PuyoBoard::set_settings(double fall_speed, int pop_requirement) {
 }
 
 void PuyoBoard::update(double et) {
+    PauseableBoard::update(et);
     assert(!is_gameover() && is_ready());
     assert(m_update_func);
     std::invoke(m_update_func, this, et);
@@ -80,7 +141,11 @@ void PuyoBoard::push_falling_piece(int first, int second) {
 }
 
 void PuyoBoard::push_fall_in_blocks(const BlockGrid & blocks_) {
-    m_fef.do_fall_in(m_blocks, blocks_);
+    if (!blocks_.is_empty()) {
+        m_fef.do_fall_in(m_blocks, blocks_);
+    } else {
+        make_blocks_fall(m_blocks, m_fef);
+    }
     m_update_func = &PuyoBoard::update_fall_effects;
 }
 
@@ -184,22 +249,9 @@ bool PuyoBoard::is_gameover() const {
         m_update_func = &PuyoBoard::update_pop_effects;
     } else {
         // after pop
-#       if 0
-        m_score += m_pef.get_score_delta_and_reset_wave_number();
-        m_score = std::min(k_max_possible_score, m_score);
-#       endif
         m_score_board->increment_score(m_score_board_number, m_pef.get_score_delta_and_reset_wave_number());
         m_update_func = nullptr;
-#       if 0
-        assert(m_blocks(get_spawn_point(m_blocks)) == k_empty_block);
-        m_piece = FallingPiece(m_next_piece.first, m_next_piece.second);
-        m_piece.set_location(get_spawn_point(blocks()));
-        m_next_piece = k_empty_pair;
-#       endif
         // I need to signal that a turn has changed...
-#       if 0
-        handle_response(m_current_scenario->on_turn_change());
-#       endif
     }
 }
 
@@ -211,9 +263,18 @@ bool PuyoBoard::is_gameover() const {
 
 // ----------------------------------------------------------------------------
 
+const VectorI SimpleMatcher::k_no_location = VectorI(-1, -1);
+
+// ----------------------------------------------------------------------------
+
 void PuyoScoreBoard::increment_score(int board, int delta) {
     if (board == 0) {
         m_first_player_score = std::min(k_max_possible_score, m_first_player_score + delta);
+    }
+    switch (board) {
+    case 0: m_p1_delta += delta; break;
+    case 1: m_p2_delta += delta; break;
+    default: break;
     }
 }
 
@@ -223,13 +284,27 @@ void PuyoScoreBoard::reset_score(int board) {
 }
 
 void PuyoScoreBoard::set_next_pair(int board, int first, int second) {
-    if (board != 0) return;
-    m_next_piece = std::make_pair(first, second);
+    switch (board) {
+    case 0: m_next_piece    = std::make_pair(first, second); return;
+    case 1: m_next_p2_piece = std::make_pair(first, second); return;
+    default: break;
+    }
+}
+
+int PuyoScoreBoard::take_last_delta(int board) {
+    int rv = 0;
+    switch (board) {
+    case 0: std::swap(m_p1_delta, rv); break;
+    case 1: std::swap(m_p2_delta, rv); break;
+    default: break;
+    }
+    return rv;
 }
 
 /* private */ void PuyoScoreBoard::draw
     (sf::RenderTarget & target, sf::RenderStates states) const
 {
+    static const auto k_empty_pair = BoardBase::k_empty_pair;
     sf::Sprite brush;
     brush.setTexture(load_builtin_block_texture());
     auto draw_block = [&target, &brush, &states](int color, VectorI r) {
@@ -238,14 +313,22 @@ void PuyoScoreBoard::set_next_pair(int board, int first, int second) {
         brush.setColor(base_color_for_block(color));
         target.draw(brush, states);
     };
-    if (m_next_piece.first != k_empty_block && m_next_piece.second != k_empty_block) {
+
+    if (m_next_piece != k_empty_pair || m_next_p2_piece != k_empty_pair) {
         brush.setColor(sf::Color::White);
         brush.setPosition(sf::Vector2f(VectorI(0, 2)*k_block_size));
         brush.setTextureRect(texture_rect_for_next());
         target.draw(brush, states);
+    }
 
-        draw_block(m_next_piece.first , VectorI(0, 3)*k_block_size);
-        draw_block(m_next_piece.second, VectorI(0, 4)*k_block_size);
+    if (m_next_piece != k_empty_pair) {
+        draw_block(m_next_piece.first , VectorI(0, 4)*k_block_size);
+        draw_block(m_next_piece.second, VectorI(0, 3)*k_block_size);
+    }
+
+    if (m_next_p2_piece != k_empty_pair) {
+        draw_block(m_next_p2_piece.first , VectorI(2, 4)*k_block_size);
+        draw_block(m_next_p2_piece.second, VectorI(2, 3)*k_block_size);
     }
 
     brush.setTextureRect(texture_rect_for_score());
@@ -298,7 +381,7 @@ PuyoStateN::PuyoStateN(int scenario_number) {
 /* private */ void PuyoStateN::draw(sf::RenderTarget & target, sf::RenderStates states) const {
     const auto & blocks = m_board.blocks();
     draw_fill_with_background(target, blocks.width(), blocks.height());
-    draw_fill_with_score_background(target, 3, blocks.height(), VectorI(blocks.width(), 0)*k_block_size);
+    draw_fill_with_score_background(target, m_score_board.width(), blocks.height(), VectorI(blocks.width(), 0)*k_block_size);
 
     target.draw(m_board, states);
     states.transform.translate( float( m_board.width()*k_block_size ), 0.f );
@@ -308,12 +391,6 @@ PuyoStateN::PuyoStateN(int scenario_number) {
 /* private */ void PuyoStateN::handle_response(const Response & response) {
     if (!response.is_valid()) {
         throw std::runtime_error("idk what to do");
-#       if 0
-        make_blocks_fall(m_blocks, m_fef);
-        m_update_func = &PuyoState::update_fall_effects;
-        return;
-#       endif
-
     }
     if (auto * cpair = response.as_pointer<std::pair<int, int>>()) {
         auto pair = *cpair;
@@ -321,19 +398,137 @@ PuyoStateN::PuyoStateN(int scenario_number) {
             pair = std::make_pair(random_color(m_rng), random_color(m_rng));
         }
         m_board.push_falling_piece(pair.first, pair.second);
-#       if 0
-        m_piece = FallingPiece(m_next_piece.first, m_next_piece.second);
-        m_next_piece = pair;
-
-        m_piece.set_location(get_spawn_point(m_blocks));
-        m_update_func = &PuyoState::update_piece;
-#       endif
     } else if (auto * fallins = response.as_pointer<Grid<int>>()) {
         m_board.push_fall_in_blocks(*fallins);
-#       if 0
-        m_fef.do_fall_in(m_blocks, *fallins);
-        m_update_func = &PuyoState::update_fall_effects;
-#       endif
+    } else if (response.is_type<ContinueFall>()) {
+        m_board.push_fall_in_blocks(BlockGrid());
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+PuyoStateVS::PuyoStateVS() {}
+
+/* private */ int PuyoStateVS::width_in_blocks() const {
+    return m_p1_board.width()*2 + m_score_board.width();
+}
+
+/* private */ int PuyoStateVS::height_in_blocks() const {
+    return m_p1_board.height();
+}
+
+/* private */ void PuyoStateVS::handle_event(PlayControlEvent pce) {
+    m_p1_board.handle_event(pce);
+}
+
+/* private */ void PuyoStateVS::update(double et) {
+    BoardState::update(et);
+    if (m_pause) return;
+
+    update_board(m_p1_board, m_p1_rng, et);
+    update_board(m_p2_board, m_p2_rng, et);
+}
+
+/* private */ void PuyoStateVS::setup_board(const Settings &) {
+    m_refuge_rng = m_p2_rng = m_p1_rng = Rng { std::random_device() () };
+    for (auto * board : { &m_p1_board, &m_p2_board }) {
+        board->set_settings(1.5, 4);
+        board->assign_score_board(board == &m_p1_board ? 0 : 1, m_score_board);
+        board->set_size(6, 12);
+        auto & rng = board == &m_p1_board ? m_p1_rng : m_p2_rng;
+        board->push_falling_piece(random_color(rng), random_color(rng));
+    }
+
+    set_max_colors(4);
+    m_p1_board.assign_pause_pointer(m_pause);
+    m_ai_player = AiScript::make_random_script();
+    m_matcher_ptr = dynamic_cast<SimpleMatcher *>(m_ai_player.get());
+
+    assert(m_p2_board.current_piece().color() != k_empty_block);
+    m_ai_player->play_board(m_p2_board);
+
+    m_p1_board.push_falling_piece(random_color(m_p1_rng), random_color(m_p1_rng));
+    m_p2_board.push_falling_piece(random_color(m_p2_rng), random_color(m_p2_rng));
+}
+
+/* private */ void PuyoStateVS::draw
+    (sf::RenderTarget & target, sf::RenderStates states) const
+{
+    const auto & blocks = m_p1_board.blocks();
+    draw_fill_with_background(target, blocks.width(), blocks.height());
+    draw_fill_with_score_background(target, m_score_board.width(), blocks.height(), VectorI(blocks.width(), 0)*k_block_size);
+    draw_fill_with_background(target, blocks.width(), blocks.height(), VectorI(blocks.width() + m_score_board.width(), 0)*k_block_size);
+    target.draw(m_p1_board, states);
+    states.transform.translate(float( blocks.width()*k_block_size ), 0.f);
+    target.draw(m_score_board, states);
+    states.transform.translate(float( m_score_board.width()*k_block_size ), 0.f);
+    target.draw(m_p2_board, states);
+
+    DrawRectangle drect;
+    static const sf::Color k_inaccess_color(200, 40, 40, 128);
+    drect.set_color(k_inaccess_color);
+    drect.set_size(k_block_size, k_block_size);
+    for (VectorI r; r != m_p2_accessables.end_position(); r = m_p2_accessables.next(r)) {
+        if (!m_matcher_ptr) {
+            // do nothing
+        } else if (m_matcher_ptr->pivot_target() == r) {
+            drect.set_color(sf::Color(180, 180, 40, 128));
+        } else if (m_matcher_ptr->adjacent_target() == r) {
+            drect.set_color(sf::Color(40, 180, 180, 128));
+        } else if (m_p2_accessables(r)) {
+            continue;
+        } else {
+            // continue;
+        }
+        drect.set_position(sf::Vector2f(r*k_block_size));
+        target.draw(drect, states);
+        drect.set_color(k_inaccess_color);
+    }
+
+    {
+    sf::Sprite brush;
+    brush.setTexture(load_builtin_block_texture());
+    brush.setPosition(0.f, 0.f);
+    //brush.setPosition(sf::Vector2f(VectorI(0, m_p1_board.width() + m_score_board.width())*k_block_size));
+    for (char c : pad_to_right(std::to_string(m_matcher_ptr->states_int()), 6)) {
+        if (c != ' ') {
+            brush.setTextureRect(texture_rect_for_char(c));
+            target.draw(brush, states);
+        }
+        brush.move(float(texture_rect_for_char('0').width), 0.f);
+    }
+    }
+}
+
+/* private */ void PuyoStateVS::update_board(PuyoBoard & board, Rng & rng, double et) {
+    bool is_p1 = &board == &m_p1_board;
+    board.update(et);
+    if (!board.is_ready()) {
+        int other_delta = m_score_board.take_last_delta(is_p1 ? 1 : 0);
+        if (other_delta != 0) {
+            int punishment = other_delta / 4;
+            BlockGrid fallins;
+            fallins.set_size(board.width(), board.height(), k_empty_block);
+            for (VectorI r; r != fallins.end_position(); r = fallins.next(r)) {
+                if (punishment == 0) break;
+                auto id = (IntDistri(0, 3)(m_refuge_rng) == 0) ? k_hard_glass_block : k_glass_block;
+                fallins(r) = id;
+                --punishment;
+            }
+            board.push_fall_in_blocks(fallins);
+        }
+    }
+
+    if (&board == &m_p2_board && !board.is_gameover()) {
+        assert(m_p2_board.current_piece().color() != k_empty_block);
+        m_ai_player->play_board(m_p2_board);
+    }
+    if (&board == &m_p2_board) {
+        m_p2_accessables = SimpleMatcher::compute_reachable_blocks(board.current_piece().location(), board.blocks(), std::move(m_p2_accessables));
+    }
+
+    while (board.is_gameover() || !board.is_ready()) {
+        board.push_falling_piece(random_color(rng), random_color(rng));
     }
 }
 

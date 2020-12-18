@@ -72,7 +72,7 @@ class ForeverPop final : public NonSequentialScenario {
     }
     ScenarioPtr clone() const override { return make_scenario<ForeverPop>(); }
 
-    int m_max_colors = 3;
+    int m_max_colors = 5;
     Rng m_rng;
 };
 
@@ -172,16 +172,6 @@ namespace {
 /* private */ Response ForeverPop::on_turn_change() {
     // I need to implement bidirectionals for subgrid
     int count = int(board().size()) - std::count(board().begin(), board().end(), k_empty_block);
-#   if 0
-    [this]() {
-        int rv = 0;
-        for (VectorI r; r != board().end_position(); r = board().next(r)) {
-            if (board()(r) != k_empty_block) ++rv;
-        }
-        return rv;
-    } ();
-    std::count_if(board().begin(), board().end(), [](int x) { return x != k_empty_block; });
-#   endif
     int area  = board().width()*board().height();
     if (area == count) {
         int y = IntDistri(0, board().height() - 1)(m_rng);
@@ -190,6 +180,7 @@ namespace {
             board()(x, y) = board()(x + 1, y);
         }
         board()(board().width() - 1, y) = t;
+        return Response(ContinueFall());
     } else if (count > (area * 4) / 10) {
         for (int x = 0; x != board().width(); ++x) {
             int & top = board()(x, 0);
@@ -197,6 +188,7 @@ namespace {
             if (IntDistri(0, 4)(m_rng) == 0) top = IntDistri(1, k_max_colors)(m_rng);
             std::swap(board()(x, board().height() - 1), top);
         }
+        return Response(ContinueFall());
     } else {
         Grid<int> fallins;
         fallins.set_size(board().width(), board().height());
@@ -209,7 +201,7 @@ namespace {
         }
         return Response(fallins);
     }
-    return Response();
+    //return Response();
 }
 
 // ------------------------------ class divider -------------------------------

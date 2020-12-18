@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "PuyoAiScript.hpp"
 #include "BoardStates.hpp"
 
 class Scenario;
@@ -42,11 +43,18 @@ ConstScenarioPtr move(ScenarioPtr &);
 
 class BoardBase : public sf::Drawable {
 public:
+    using ColorPair = std::pair<int, int>;
+    static const ColorPair k_empty_pair;
     int width() const { return blocks().width(); }
     int height() const { return blocks().height(); }
 
     virtual const BlockGrid & blocks() const = 0;
-    virtual void update(double et) = 0;
+    // false if between turns
+    virtual bool is_ready() const = 0;
+    virtual bool is_gameover() const = 0;
+
+    virtual const FallingPiece & current_piece() const = 0;
+    virtual ColorPair next_piece() const = 0;
 
     virtual void handle_event(PlayControlEvent) = 0;
 
@@ -64,7 +72,7 @@ public:
     static constexpr const double k_slow_fall  = 1.;
     static constexpr const double k_move_delay = 1. / 8.;
 
-    void update(double et) override;
+    virtual void update(double et);
 
     void handle_event(PlayControlEvent) override;
 
@@ -74,9 +82,7 @@ protected:
     PauseableBoard() {}
 
     virtual FallingPieceBase & piece_base() = 0;
-#   if 0
-    bool is_paused() const { return m_is_paused; }
-#   endif
+
     double fall_multiplier() const { return m_fall_multiplier; }
 
 private:
@@ -84,9 +90,6 @@ private:
     double m_fall_multiplier = 1.;
     double m_move_time = 0.;
     PlayControlId m_move_dir = k_niether_dir;
-#   if 0
-    bool m_is_paused = false;
-#   endif
     bool * m_pause_ptr = nullptr;
 };
 
@@ -116,7 +119,6 @@ public:
 // no concept of location, but render states transformations are available
 class PuyoBoard final : public PauseableBoard {
 public:
-    static const std::pair<int, int> k_empty_pair;
     static constexpr const int k_init_pop_requirement = 4;
 
     void assign_score_board(int this_board_number, PuyoScoreBoardBase &);
@@ -127,8 +129,12 @@ public:
     void push_falling_piece(int first, int second);
     void push_fall_in_blocks(const BlockGrid &);
 
-    bool is_ready() const;
-    bool is_gameover() const;
+    bool is_ready() const override;
+    bool is_gameover() const override;
+
+    const FallingPiece & current_piece() const override { return m_piece; }
+
+    ColorPair next_piece() const override { return m_next_piece; }
 
     const BlockGrid & blocks() const override { return m_blocks; }
     auto blocks() { return make_sub_grid(m_blocks); }
@@ -149,7 +155,7 @@ private:
     int m_score_board_number = PuyoScoreBoardBase::k_not_any_board;
 
     FallingPiece m_piece;
-    std::pair<int, int> m_next_piece = k_empty_pair;
+    ColorPair m_next_piece = k_empty_pair;
     UpdateFunc m_update_func = &PuyoBoard::update_fall_effects;
     double m_fall_delay = 0.5;
     double m_fall_time  = 0.;
@@ -167,90 +173,35 @@ public:
     void increment_score(int board, int delta) override;
     void reset_score(int board) override;
     void set_next_pair(int board, int first, int second) override;
+    int width() const { return 3; }
+    int take_last_delta(int board);
 
 private:
     void draw(sf::RenderTarget &, sf::RenderStates) const override;
 
-    std::pair<int, int> m_next_piece = PuyoBoard::k_empty_pair;
+    std::pair<int, int> m_next_piece    = PuyoBoard::k_empty_pair;
+    std::pair<int, int> m_next_p2_piece = PuyoBoard::k_empty_pair;
+
+    int m_p1_delta = 0, m_p2_delta = 0;
+
     int m_first_player_score = 0;
 };
 
 // ----------------------------------------------------------------------------
 
-inline void PauseableBoard::update(double et) {
-#   if 0
-    if (is_paused()) return;
-#   endif
-    if (m_move_dir == k_niether_dir) {
-        m_move_time = 0.;
-        return;
-    }
-    if ((m_move_time += et) >= k_move_delay) {
-        switch (m_move_dir) {
-        case PlayControlId::left:
-            piece_base().move_left(blocks());
-            break;
-        case PlayControlId::right:
-            piece_base().move_right(blocks());
-            break;
-        default:
-            throw std::runtime_error("PauseableWithFallingPieceState::update: "
-                                     "m_move_dir must be either right, left, or count.");
-        }
-        m_move_time = 0.;
-    }
-    m_move_dir = k_niether_dir;
-}
-
-inline void PauseableBoard::handle_event(PlayControlEvent event) {
-    if (m_pause_ptr) {
-        if (event.id != PlayControlId::pause && *m_pause_ptr) return;
-    }
-    if (event.state == PlayControlState::just_pressed) {
-        switch (event.id) {
-        case PlayControlId::left:
-            if (m_move_time == 0.)
-                piece_base().move_left(blocks());
-            break;
-        case PlayControlId::right:
-            if (m_move_time == 0.)
-                piece_base().move_right(blocks());
-            break;
-        case PlayControlId::rotate_left : piece_base().rotate_left (blocks()); break;
-        case PlayControlId::rotate_right: piece_base().rotate_right(blocks()); break;
-        default: break;
-        }
-    }
-
-    if (is_pressed(event) && (   event.id == PlayControlId::left
-                              || event.id == PlayControlId::right))
-    {
-        m_move_dir = event.id;
-    }
-
-    if (   event.state == PlayControlState::just_pressed
-        && event.id    == PlayControlId   ::pause
-        && m_pause_ptr)
-    { *m_pause_ptr = !*m_pause_ptr; }
-
-    if (event.id == PlayControlId::down) {
-        m_fall_multiplier = is_pressed(event) ? 5.*(blocks().height() / 10) : 1.;
-    }
-}
-
-// ----------------------------------------------------------------------------
-
 class PuyoStateN final : public BoardState {
 public:
+    struct ContinueFall {};
     // needed by Scenario
-    using Response = MultiType<std::pair<int, int>, BlockGrid>;
+    using Response = MultiType<std::pair<int, int>, BlockGrid, ContinueFall>;
     explicit PuyoStateN(int scenario_number);
     explicit PuyoStateN(ScenarioPtr sptr):
         m_current_scenario(std::move(sptr))
     {}
 
 private:
-    int width_in_blocks () const override { return m_board.width () + 3; }
+    int width_in_blocks () const override
+        { return m_board.width() + m_score_board.width(); }
 
     int height_in_blocks() const override { return m_board.height(); }
 
@@ -275,6 +226,45 @@ private:
     // actually state wide
     bool m_pause = false;
 };
+
+class PuyoStateVS final : public BoardState {
+public:
+    // needed by Scenario
+    using Response = MultiType<std::pair<int, int>, BlockGrid>;
+    PuyoStateVS();
+
+private:
+    int width_in_blocks () const override;
+
+    int height_in_blocks() const override;
+
+    int scale() const override { return 3; }
+
+    void handle_event(PlayControlEvent pce) override;
+
+    void update(double) override;
+
+    void setup_board(const Settings &) override;
+
+    void draw(sf::RenderTarget &, sf::RenderStates) const override;
+
+    void update_board(PuyoBoard &, Rng &, double et);
+
+    Rng m_p1_rng, m_p2_rng, m_refuge_rng;
+
+    PuyoScoreBoard m_score_board;
+    PuyoBoard m_p1_board;
+    PuyoBoard m_p2_board;
+
+    std::unique_ptr<AiScript> m_ai_player;
+    SimpleMatcher * m_matcher_ptr = nullptr;
+
+    // actually state wide
+    bool m_pause = false;
+
+    Grid<bool> m_p2_accessables;
+};
+
 #if 0
 // ----------------------------------------------------------------------------
 

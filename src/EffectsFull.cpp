@@ -172,9 +172,8 @@ void FallEffectsFull::do_fall_in
         target.draw(brush, states);
     }
     brush.setPosition(0.f, 0.f);
-    using Fp = void(*)(const ConstSubGrid<int> &, const sf::Sprite &,
-    sf::RenderTarget &);
-    (m_render_merged ? Fp(render_merged_blocks) : Fp(render_blocks))(m_blocks_copy, brush, target);
+    using Fp = void(*)(const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &, sf::RenderStates);
+    (m_render_merged ? Fp(render_merged_blocks) : Fp(render_blocks))(m_blocks_copy, brush, target, states);
 }
 
 // ----------------------------------------------------------------------------
@@ -272,7 +271,7 @@ bool PopEffectsPartial::has_effects() const {
     if (!has_effects()) return;
     sf::Sprite brush;
     brush.setTexture(*m_texture);
-    render_merged_blocks(m_blocks_copy, brush, target);
+    render_merged_blocks(m_blocks_copy, brush, target, states);
     for (const auto & effect : m_flash_effects) {
         draw_flash_effect(target, states, effect);
     }
