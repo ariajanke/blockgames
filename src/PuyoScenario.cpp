@@ -113,14 +113,15 @@ std::vector<ScenarioPtr> verify_guarantees(std::vector<ScenarioPtr> &&);
 
 } // end of <anonymous> namespace
 
-/* static */ const std::pair<int, int> Scenario::k_random_pair = std::make_pair(-1, -1);
+/* static */ const std::pair<BlockId, BlockId> Scenario::k_random_pair =
+    std::make_pair(static_cast<BlockId>(-1), static_cast<BlockId>(-1));
 
 /* virtual */ Scenario::~Scenario() {}
 
 double Scenario::fall_speed() const
     { return m_fall_speed; }
 
-void Scenario::assign_board(SubGrid<int> subgrid)
+void Scenario::assign_board(BlockSubGrid subgrid)
     { m_board_ref = subgrid; }
 #if 0
 void Scenario::assign_board(Grid<int> & grid)
@@ -129,7 +130,7 @@ void Scenario::assign_board(Grid<int> & grid)
 /* protected */ Grid<int> & Scenario::board()
     { return *m_board; }
 #endif
-/* protected */ SubGrid<int> & Scenario::board() {
+/* protected */ BlockSubGrid & Scenario::board() {
     if (m_board_ref.width() == 0 || m_board_ref.height() == 0)
         throw std::runtime_error("unassigned");
     return m_board_ref;
@@ -175,7 +176,7 @@ namespace {
     int area  = board().width()*board().height();
     if (area == count) {
         int y = IntDistri(0, board().height() - 1)(m_rng);
-        int t = board()(0, y);
+        auto t = board()(0, y);
         for (int x = 0; x != board().width() - 1; ++x) {
             board()(x, y) = board()(x + 1, y);
         }
@@ -183,20 +184,29 @@ namespace {
         return Response(ContinueFall());
     } else if (count > (area * 4) / 10) {
         for (int x = 0; x != board().width(); ++x) {
-            int & top = board()(x, 0);
+            auto & top = board()(x, 0);
             if (top != k_empty_block) continue;
-            if (IntDistri(0, 4)(m_rng) == 0) top = IntDistri(1, k_max_colors)(m_rng);
+            if (IntDistri(0, 4)(m_rng) == 0) top = ColorBlockDistri(m_max_colors)(m_rng);
+#           if 0
+            IntDistri(1, k_max_colors)(m_rng);
+#           endif
             std::swap(board()(x, board().height() - 1), top);
         }
         return Response(ContinueFall());
     } else {
-        Grid<int> fallins;
+        BlockGrid fallins;
         fallins.set_size(board().width(), board().height());
-        for (int & x : fallins) {
+        for (auto & x : fallins) {
             if (IntDistri(1, 10)(m_rng) == 10) {
-                x = k_hard_glass_block;
+                x = BlockId::hard_glass;
+#               if 0
+                k_hard_glass_block;
+#               endif
             } else {
-                x = IntDistri(1, m_max_colors)(m_rng);
+                x = ColorBlockDistri(m_max_colors)(m_rng);
+#               if 0
+                IntDistri(1, m_max_colors)(m_rng);
+#               endif
             }
         }
         return Response(fallins);
@@ -219,14 +229,20 @@ namespace {
         return Response { k_random_pair };
     }
     Response rv;
-    auto & fallins = rv.reset<Grid<int>>();
+    auto & fallins = rv.reset<BlockGrid>();
     fallins.set_size(board().width(), board().height());
     for (int x = 0; x != board().width(); ++x) {
         if (IntDistri(0, 3)(m_rng)) continue;
         if (IntDistri(0, 3)(m_rng)) {
-            fallins(x, 0) = k_glass_block;
+            fallins(x, 0) = BlockId::glass;
+#           if 0
+                    k_glass_block;
+#           endif
         } else {
-            fallins(x, 0) = k_hard_glass_block;
+            fallins(x, 0) = BlockId::hard_glass;
+#           if 0
+                    k_hard_glass_block;
+#           endif
         }
     }
     return rv;

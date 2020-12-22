@@ -24,7 +24,7 @@
 class Scenario {
 public:
     virtual ~Scenario();
-    static const std::pair<int, int> k_random_pair;
+    static const std::pair<BlockId, BlockId> k_random_pair;
 
     using Response = PuyoStateN::Response;
     using ContinueFall = PuyoStateN::ContinueFall;
@@ -41,7 +41,7 @@ public:
 #   if 0
     void assign_board(Grid<int> &);
 #   endif
-    void assign_board(SubGrid<int>);
+    void assign_board(BlockSubGrid);
 
     template<typename T>
     static ScenarioPtr make_scenario() {
@@ -62,14 +62,15 @@ public:
     static const std::vector<ConstScenarioPtr> & get_all_scenarios();
 
     static const int k_freeplay_scenario_count;
+
 protected:
-    SubGrid<int> & board();
+    BlockSubGrid & board();
 
     void set_fall_speed(double);
 
 private:
     double m_fall_speed = 1.;
-    SubGrid<int> m_board_ref;
+    BlockSubGrid m_board_ref;
 #   if 0
     Grid<int> * m_board = nullptr;
 #   endif

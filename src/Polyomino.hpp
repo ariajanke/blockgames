@@ -26,9 +26,9 @@ class Polyomino final : public FallingPieceBase {
 public:
     struct Block {
         Block() {}
-        Block(VectorI r, int c): offset(r), color(c) {}
+        Block(VectorI r, BlockId c): offset(r), color(c) {}
         VectorI offset;
-        int color = k_empty_block;
+        BlockId color = k_empty_block;
     };
     enum class Domino { l, count };
     enum class Tromino { i, l, count };
@@ -63,12 +63,12 @@ public:
     void set_location(int x, int y);
     void place(BlockGrid &) const;
     VectorI location() const { return m_location; }
-    void set_colors(int);
+    void set_colors(BlockId);
     void enable_rotation() { m_rotation_enabled = true; }
     void disable_rotation() { m_rotation_enabled = false; }
 
     int block_count() const;
-    int block_color(int) const;
+    BlockId block_color(int) const;
     VectorI block_location(int) const;
 
     bool obstructed_by(const BlockGrid &) const;

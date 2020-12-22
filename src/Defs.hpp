@@ -26,6 +26,7 @@
 #include <SFML/Graphics/Color.hpp>
 
 #include <common/Grid.hpp>
+#include <common/SubGrid.hpp>
 
 #include <ksg/Text.hpp>
 
@@ -67,20 +68,42 @@ struct GetEdgeValue<edge, Types...> : public GetEdgeValue<Types...> {
 // [0]    : empty
 // [1   5]: colored normal blocks
 // [6 ...]: special blocks
+#if 0
 [[maybe_unused]] constexpr const int k_empty_block        =  0;
+#endif
 [[maybe_unused]] constexpr const int k_min_colors         =  1;
 [[maybe_unused]] constexpr const int k_max_colors         =  5;
+#if 0
 [[maybe_unused]] constexpr const int k_glass_block        =  6;
 [[maybe_unused]] constexpr const int k_hard_glass_block   =  7;
+#endif
 [[maybe_unused]] constexpr const int k_min_board_size     =  2;
 [[maybe_unused]] constexpr const int k_max_board_size     = 30;
 [[maybe_unused]] constexpr const int k_free_play_scenario = -1;
 
-enum class Block {
+enum class BlockId {
     empty,
     red, blue, green, magenta, yellow,
     glass, hard_glass,
 };
+
+[[maybe_unused]] constexpr const auto k_empty_block = BlockId::empty;
+[[maybe_unused]] constexpr const auto k_special_block_begin = static_cast<int>(BlockId::glass);
+
+namespace BlockIdShorthand {
+
+// the issue with the "k" prefix, is that it makes the names too samey imho
+// They need to simultaneously be distinct enough from each other and short
+// enough to be usable.
+
+const constexpr auto e_ = BlockId::empty;
+const constexpr auto r_ = BlockId::red;
+const constexpr auto b_ = BlockId::blue;
+const constexpr auto g_ = BlockId::green;
+const constexpr auto m_ = BlockId::magenta;
+const constexpr auto y_ = BlockId::yellow;
+
+} // end of BlockIdShorthand namespace
 
 [[maybe_unused]] constexpr const auto k_edge_list =
     { k_left_edge, k_right_edge, k_top_edge, k_bottom_edge };
@@ -112,17 +135,62 @@ struct AlwaysMidRng {
     T operator () () { return T(0.5); }
 };
 
-using BlockGrid = Grid<int>;
+using BlockGrid         =         Grid<BlockId>;
+using BlockSubGrid      =      SubGrid<BlockId>;
+using ConstBlockSubGrid = ConstSubGrid<BlockId>;
 
-BlockGrid make_grid(std::initializer_list<std::initializer_list<int>>);
+BlockGrid make_grid(std::initializer_list<std::initializer_list<BlockId>>);
 
-bool is_grid_the_same(const BlockGrid &, std::initializer_list<std::initializer_list<int>>);
-
+bool is_grid_the_same(const BlockGrid &, std::initializer_list<std::initializer_list<BlockId>>);
+#if 0
 inline bool is_block_color(int x)
-    { return x > k_empty_block && x < k_glass_block; }
-
+    { return x > static_cast<int>(k_empty_block) && x < k_glass_block; }
+#endif
+inline bool is_block_color(BlockId bid) {
+    using namespace BlockIdShorthand;
+    switch (bid) {
+    case r_: case g_: case b_: case m_: case y_: return true;
+    default: return false;
+    }
+}
+#if 0
 inline int decay_block(int x)
-    { return x == k_hard_glass_block ? k_glass_block : k_empty_block; }
+    { return x == k_hard_glass_block ? k_glass_block : static_cast<int>(k_empty_block); }
+#endif
+inline BlockId decay_block(BlockId bid) {
+    switch (bid) {
+    case BlockId::glass     : return BlockId::empty;
+    case BlockId::hard_glass: return BlockId::glass;
+    default: return bid;
+    }
+}
+
+class ColorBlockDistri {
+public:
+    ColorBlockDistri(int max_colors): m_max_colors(max_colors) {}
+    template <typename Rng>
+    BlockId operator () (Rng & rng) const {
+        auto rv = static_cast<BlockId>(std::uniform_int_distribution<int>(k_min_colors, m_max_colors)(rng));
+        if (is_block_color(rv)) return rv;
+        throw std::runtime_error("ColorBlockDistri::operator(): failed to generate valid block color id.");
+    }
+
+private:
+    int m_max_colors = k_min_colors;
+};
+
+inline BlockId map_int_to_color(int n) {
+    using namespace BlockIdShorthand;
+    auto verify_is_color = [](BlockId bid) {
+        if (is_block_color(bid)) return bid;
+        throw std::runtime_error("map_int_to_color: returning block id that is not a color.");
+    };
+    switch (n) {
+    case 1: case 2: case 3: case 4: case 5:
+        return verify_is_color(static_cast<BlockId>(n));
+    default: throw std::invalid_argument("map_int_to_color: Only integers in [1 5] can be mapped to block ids.");
+    }
+}
 
 using UString = ksg::Text::UString;
 

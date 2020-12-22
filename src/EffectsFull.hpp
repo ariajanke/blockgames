@@ -38,16 +38,17 @@ public:
     void update(double et);
     bool has_effects() const;
 
-    void do_fall_in(Grid<int> & original_board, const Grid<int> & board_of_fallins);
+    void do_fall_in(BlockGrid & original_board, const BlockGrid & board_of_fallins);
 
     void set_vector_transform(TransformVectorFunc f) { m_transf_v = f; }
     void set_render_blocks_merged_enabled(bool b) { m_render_merged = b; }
 
     static VectorI identity_func(VectorI r) { return r; }
     static VectorI flip_xy(VectorI r) { return VectorI(r.y, r.x); }
+
 private:
     struct FallEffect {
-        int color = k_empty_block;
+        BlockId color = k_empty_block;
         VectorI from, to;
         double fall_position = 0.;
         double rate = 1.;
@@ -57,14 +58,14 @@ private:
         { return (magnitude(effect.from - effect.to) < effect.fall_position); }
 
     void start() override;
-    void post_stationary_block(VectorI, int) override;
-    void post_block_fall(VectorI, VectorI, int) override;
+    void post_stationary_block(VectorI, BlockId) override;
+    void post_block_fall(VectorI, VectorI, BlockId) override;
     void finish() override;
     void draw(sf::RenderTarget & target, sf::RenderStates states) const override;
 
     std::vector<FallEffect> m_fall_effects;
     std::vector<double> m_rates_for_col;
-    Grid<int> m_blocks_copy;
+    BlockGrid m_blocks_copy;
     const sf::Texture * m_texture = nullptr;
     TransformVectorFunc m_transf_v = identity_func;
     bool m_render_merged = true;
@@ -85,12 +86,12 @@ protected:
     PopEffectsPartial() {}
     ~PopEffectsPartial() override {}
 
-    void set_internal_grid_copy(const Grid<int> & grid) {
+    void set_internal_grid_copy(const BlockGrid & grid) {
         m_blocks_copy = grid;
     }
     void start() override;
     void finish() override;
-    void post_pop_effect(VectorI at, int color) override;
+    void post_pop_effect(VectorI at, BlockId color) override;
     void post_number(VectorI at, int);
 
 private:
@@ -98,14 +99,14 @@ private:
 
     struct FlashEffect {
         double remaining = k_init_remaining;
-        int block_id = k_empty_block;
+        BlockId block_id = k_empty_block;
         VectorI at;
     };
 
     struct PieceEffect {
         static constexpr const double k_init_speed = 75.;
         static constexpr const double k_gravity    = 533.;
-        int block_id = k_empty_block;
+        BlockId block_id = k_empty_block;
         VectorD velocity;
         VectorD location;
         double remaining = k_init_remaining;
@@ -116,9 +117,6 @@ private:
     struct CharEffect {
         static const VectorD k_velocity;
         VectorD location;
-#       if 0
-        //VectorI texture_offset;
-#       endif
         char identity;
         double remaining = k_init_remaining;
     };
@@ -128,9 +126,6 @@ private:
     static bool ready_to_delete(const CharEffect  & ef) { return ef.remaining <= 0.; }
 
     static sf::Color brighten_by(sf::Color c, const FlashEffect & effect) {
-#       if 0
-        //static constexpr const auto k_init_rem = k_init_remaining;
-#       endif
         return brighten_color(c, (k_init_remaining - effect.remaining) / k_init_remaining);
     }
 
@@ -146,7 +141,7 @@ private:
     std::vector<PieceEffect> m_piece_effects;
     std::vector<CharEffect > m_char_effects ;
 
-    Grid<int> m_blocks_copy;
+    BlockGrid m_blocks_copy;
     std::default_random_engine m_rng = std::default_random_engine { std::random_device()() };
     const sf::Texture * m_texture = nullptr;
 };
@@ -155,12 +150,13 @@ private:
 
 class PuyoPopEffects final : public PopEffectsPartial {
 public:
-    bool do_pop(Grid<int> & grid, int pop_requirement) {
-        set_internal_grid_copy(grid);
+    bool do_pop(BlockGrid & grid, int pop_requirement) {
         ++m_wave_number;
         m_group_number = 0;
         m_pop_requirement = pop_requirement;
-        return pop_connected_blocks(grid, pop_requirement, *this);
+        auto rv = pop_connected_blocks(grid, pop_requirement, *this);
+        set_internal_grid_copy(grid);
+        return rv;
     }
 
     int get_score_delta_and_reset_wave_number() {
@@ -170,7 +166,7 @@ public:
     }
 
 private:
-    void post_pop_effect(VectorI at, int color) override {
+    void post_pop_effect(VectorI at, BlockId color) override {
         PopEffectsPartial::post_pop_effect(at, color);
         if (!is_block_color(color)) return;
     }
@@ -201,7 +197,7 @@ private:
 
 class SameGamePopEffects final : public PopEffectsPartial {
 public:
-    void do_pop(Grid<int> & grid, VectorI selection, bool pop_single_blocks) {
+    void do_pop(BlockGrid & grid, VectorI selection, bool pop_single_blocks) {
         if (!grid.has_position(selection)) {
             throw std::invalid_argument("SameGamePopEffects::do_pop: selection is outside of the grid.");
         }
@@ -220,12 +216,7 @@ public:
         finish();
 
     }
+
 private:
     void post_group(const std::vector<VectorI> &) override {}
 };
-
-// ----------------------------------------------------------------------------
-
-#if 0
-void bind_block_to_sprite(sf::Sprite &, int block_id, TileEdges);
-#endif

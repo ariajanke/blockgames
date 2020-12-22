@@ -25,13 +25,16 @@
 
 namespace {
 
-bool has_consistent_width(std::initializer_list<std::initializer_list<int>>);
+template <typename T>
+bool has_consistent_width(std::initializer_list<std::initializer_list<T>>);
 
 } // end of <anonymous> namespace
 
 BlockGrid make_grid
-    (std::initializer_list<std::initializer_list<int>> list)
+    (std::initializer_list<std::initializer_list<BlockId>> list)
 {
+    return BlockGrid(list);
+#   if 0
     assert(has_consistent_width(list));
     int last_width = -1;
     for (auto sublist : list) {
@@ -45,17 +48,18 @@ BlockGrid make_grid
     rv.set_size(last_width, list.size());
     VectorI r;
     for (auto sublist : list) {
-        for (int i : sublist) {
+        for (auto i : sublist) {
             assert(r != rv.end_position());
-            rv(r) = i;
+            rv(r) = static_cast<int>(i);
             r = rv.next(r);
         }
     }
     return rv;
+#   endif
 }
 
 bool is_grid_the_same
-    (const BlockGrid & grid, std::initializer_list<std::initializer_list<int>> list)
+    (const BlockGrid & grid, std::initializer_list<std::initializer_list<BlockId>> list)
 {
     assert(has_consistent_width(list));
     if (grid.height() != int(list.size())) return false;
@@ -63,7 +67,7 @@ bool is_grid_the_same
     if (grid.width() != int(list.begin()->size())) return false;
     VectorI r;
     for (auto sublist : list) {
-        for (int i : sublist) {
+        for (auto i : sublist) {
             assert(r != grid.end_position());
             if (grid(r) != i) return false;
             r = grid.next(r);
@@ -88,7 +92,8 @@ GameSelection to_game_selection(std::size_t idx) {
 
 namespace {
 
-bool has_consistent_width(std::initializer_list<std::initializer_list<int>> list) {
+template <typename T>
+bool has_consistent_width(std::initializer_list<std::initializer_list<T>> list) {
     int last_width = -1;
     for (auto sublist : list) {
         if (last_width == -1) {

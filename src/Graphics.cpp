@@ -43,15 +43,15 @@ constexpr const int k_score_start_y = (k_color_group_size*2 + 2)*k_block_size;
 constexpr const int k_score_card_width = 16*3;
 
 const ColorGrid & builtin_blocks();
-sf::Color get_group_color_value(int color);
+sf::Color get_group_color_value(BlockId color);
 uint8_t treat_as_grey(sf::Color);
 sf::Color mask_color(uint8_t grey, sf::Color fullbright);
 sf::Color blend_with_alpha(sf::Color, sf::Color);
-ColorGroupInfo get_color_group_info(int color);
+ColorGroupInfo get_color_group_info(BlockId);
 sf::IntRect to_tile_rect(VectorI loc);
 
 void render_blocks
-    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &,
+    (const ConstBlockSubGrid &, const sf::Sprite &, sf::RenderTarget &,
      bool do_block_merging, sf::RenderStates = sf::RenderStates::Default);
 
 } // end of <anonymous> namespace
@@ -87,19 +87,24 @@ const uint8_t * get_icon_image() {
     const auto & blocks = builtin_blocks();
     using std::make_tuple;
 
-    auto make_unmerged_block = [](int group) {
+    static auto make_unmerged_block = [](BlockId group) {
         auto r = std::get<1>(get_color_group_info(group));
         r += VectorI(3, 3)*k_block_size;
         return make_const_sub_grid(builtin_blocks(), r, k_block_size, k_block_size);
     };
 
-    auto glass_block = make_const_sub_grid(blocks, VectorI(1, 2*4)*k_block_size, k_block_size, k_block_size);
-    auto list = {
+    auto list = [&blocks]() {
+        using namespace BlockIdShorthand;
+        auto glass_block = make_const_sub_grid(blocks, VectorI(1, 2*4)*k_block_size, k_block_size, k_block_size);
+
+        std::array rv = {
         make_tuple(sf::Color::White, glass_block, VectorI(k_block_size, k_block_size)),
-        make_tuple(get_group_color_value(1), make_unmerged_block(1), VectorI(k_block_size, 0)),
-        make_tuple(get_group_color_value(2), make_unmerged_block(2), VectorI(0, k_block_size)),
-        make_tuple(get_group_color_value(3), make_unmerged_block(3), VectorI(0, 0))
-    };
+        make_tuple(get_group_color_value(r_), make_unmerged_block(r_), VectorI(k_block_size, 0)),
+        make_tuple(get_group_color_value(g_), make_unmerged_block(g_), VectorI(0, k_block_size)),
+        make_tuple(get_group_color_value(b_), make_unmerged_block(b_), VectorI(0, 0))
+        };
+        return rv;
+    } ();
     for (const auto & [fullbright, srcgrid, offset] : list) {
         for (VectorI r; r != srcgrid.end_position(); r = srcgrid.next(r)) {
             auto & dest = small_grid(r + offset);
@@ -131,7 +136,7 @@ const sf::Texture & load_builtin_block_texture() {
 
 // <-------------------------- block drawer helpers -------------------------->
 
-sf::IntRect texture_rect_for(int n, TileEdges edges) {
+sf::IntRect texture_rect_for(BlockId n, TileEdges edges) {
     if (!is_block_color(n)) {
         throw std::invalid_argument("texture_rect_for: block type cannot have edges.");
     }
@@ -140,9 +145,10 @@ sf::IntRect texture_rect_for(int n, TileEdges edges) {
     return to_tile_rect(u*k_block_size + std::get<1>(get_color_group_info(n)));
 }
 
-sf::IntRect texture_rect_for(int n) {
+sf::IntRect texture_rect_for(BlockId n) {
     if (!is_block_color(n)) {
-        int x_offset = (n - k_glass_block)*k_block_size;
+        int n_as_num = static_cast<int>(n);
+        int x_offset = (n_as_num - k_special_block_begin)*k_block_size;
         return sf::IntRect(x_offset, 4*2*k_block_size, k_block_size, k_block_size);
     }
     return texture_rect_for(n, TileEdges().set());
@@ -183,7 +189,7 @@ sf::IntRect texture_rect_for_char(char c) {
     return sf::IntRect(x, k_score_start_y, k_char_size, k_block_size);
 }
 
-sf::Color base_color_for_block(int n) {
+sf::Color base_color_for_block(BlockId n) {
     return is_block_color(n) ? get_group_color_value(n) : sf::Color::White;
 }
 
@@ -199,28 +205,28 @@ sf::Color brighten_color(sf::Color c, double brightenfactor) {
 }
 
 void render_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush,
+    (const ConstBlockSubGrid & blocks, const sf::Sprite & brush,
      sf::RenderTarget & target)
 {
     render_blocks(blocks, brush, target, false);
 }
 
 void render_merged_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush,
+    (const ConstBlockSubGrid & blocks, const sf::Sprite & brush,
      sf::RenderTarget & target)
 {
     render_blocks(blocks, brush, target, true);
 }
 
 void render_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush,
+    (const ConstBlockSubGrid & blocks, const sf::Sprite & brush,
      sf::RenderTarget & target, sf::RenderStates states)
 {
     render_blocks(blocks, brush, target, false, states);
 }
 
 void render_merged_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush,
+    (const ConstBlockSubGrid & blocks, const sf::Sprite & brush,
      sf::RenderTarget & target, sf::RenderStates states)
 {
     render_blocks(blocks, brush, target, true, states);
@@ -230,7 +236,7 @@ namespace {
 
 void add_edge_masks(SubGrid<sf::Color>);
 
-const char * get_color_mask(int);
+const char * get_color_mask(BlockId);
 
 int to_16x16_index(VectorI r);
 
@@ -240,7 +246,7 @@ void add_builtin_background(SubGrid<sf::Color>);
 
 void add_builtin_score_numbers(SubGrid<sf::Color>);
 
-TileEdges get_edges_for(const ConstSubGrid<int> &, VectorI);
+TileEdges get_edges_for(const ConstBlockSubGrid &, VectorI);
 
 const ColorGrid & builtin_blocks() {
     static std::unique_ptr<ColorGrid> rv;
@@ -250,7 +256,9 @@ const ColorGrid & builtin_blocks() {
     Grid<sf::Color> & grid = *rv;
     grid.set_size( k_color_group_size*3     *k_block_size,
                   (k_color_group_size*2 + 4)*k_block_size, sf::Color(0, 0, 0, 0));
-    for (int color = k_min_colors; color != k_max_colors + 1; ++color) {
+    for (auto color : { BlockId::blue, BlockId::green, BlockId::magenta,
+                        BlockId::red, BlockId::yellow })
+    {
         auto [color_val, offset] = get_color_group_info(color);
         (void)color_val; // color added at draw time
         auto subg = make_sub_grid(grid, offset, k_block_size*k_color_group_size, k_block_size*k_color_group_size);
@@ -282,7 +290,7 @@ const ColorGrid & builtin_blocks() {
     return *rv;
 }
 
-sf::Color get_group_color_value(int color) {
+sf::Color get_group_color_value(BlockId color) {
     return std::get<0>(get_color_group_info(color));
 }
 
@@ -307,9 +315,10 @@ sf::Color blend_with_alpha(sf::Color a, sf::Color b) {
     return sf::Color(a.r + b.r, a.g + b.g, a.b + b.b, 255);
 }
 
-ColorGroupInfo get_color_group_info(int color) {
+ColorGroupInfo get_color_group_info(BlockId color) {
     using sf::Color;
     using std::make_tuple;
+    using namespace BlockIdShorthand;
     static const auto mk_v = [](int x, int y) {
         assert(y < 2);
         return VectorI(x, y)*k_block_size*k_color_group_size;
@@ -317,11 +326,12 @@ ColorGroupInfo get_color_group_info(int color) {
     switch (color) {
     case k_empty_block:
         throw std::invalid_argument("color_block_nfo: Empty block has no color");
-    case 1: return make_tuple(Color(230,  70,  70), mk_v(0, 0));
-    case 2: return make_tuple(Color( 70, 230,  70), mk_v(1, 0));
-    case 3: return make_tuple(Color(100, 100, 250), mk_v(2, 0));
-    case 4: return make_tuple(Color(230, 230,  70), mk_v(0, 1));
-    case 5: return make_tuple(Color(230,  70, 230), mk_v(1, 1));
+    case r_: return make_tuple(Color(230,  70,  70), mk_v(0, 0));
+    case g_: return make_tuple(Color( 70, 230,  70), mk_v(1, 0));
+    case b_: return make_tuple(Color(100, 100, 250), mk_v(2, 0));
+    case m_: return make_tuple(Color(230, 230,  70), mk_v(0, 1));
+    case y_: return make_tuple(Color(230,  70, 230), mk_v(1, 1));
+    default: break;
     }
     throw std::invalid_argument("color_block_nfo: invalid color");
 }
@@ -331,7 +341,7 @@ sf::IntRect to_tile_rect(VectorI loc) {
 }
 
 void render_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Sprite & brush_,
+    (const ConstBlockSubGrid & blocks, const sf::Sprite & brush_,
      sf::RenderTarget & target, bool do_block_merging,
      sf::RenderStates states)
 {
@@ -356,11 +366,11 @@ void render_blocks
 
 const char * get_edge_mask(const TileEdges &);
 
-const char * get_color_mask_impl(int);
+const char * get_color_mask_impl(BlockId);
 
 const char * verify_16x16(const char *);
 
-const char * get_special_block(int x);
+const char * get_special_block(BlockId x);
 
 void add_edge_masks(SubGrid<sf::Color> grid) {
     auto itr = k_full_edge_list.begin();
@@ -396,14 +406,14 @@ void add_edge_masks(SubGrid<sf::Color> grid) {
     }}
 }
 
-const char * get_color_mask(int n)
+const char * get_color_mask(BlockId n)
     { return verify_16x16(get_color_mask_impl(n)); }
 
 int to_16x16_index(VectorI r)
     { return r.x + r.y*k_block_size; }
 
 void add_specials(SubGrid<sf::Color> grid) {
-    static const auto k_specials_list = { 6 , 7 };//, 8, 9 };
+    static const auto k_specials_list = { BlockId::glass , BlockId::hard_glass };
 
     for (auto itr = k_specials_list.begin(); itr != k_specials_list.end(); ++itr) {
         assert(itr != k_specials_list.end());
@@ -710,7 +720,7 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
     }
 }
 
-TileEdges get_edges_for(const ConstSubGrid<int> & blocks, VectorI r) {
+TileEdges get_edges_for(const ConstBlockSubGrid & blocks, VectorI r) {
     if (!is_block_color(blocks(r))) { return TileEdges().set(); }
     using std::make_pair;
     auto neighbors = {
@@ -732,15 +742,15 @@ TileEdges get_edges_for(const ConstSubGrid<int> & blocks, VectorI r) {
 
 const char * get_edge_mask_impl(const TileEdges &);
 
-const char * get_special_block_impl(int);
+const char * get_special_block_impl(BlockId);
 
 const char * get_edge_mask(const TileEdges & edges) {
     return verify_16x16(get_edge_mask_impl(edges));
 }
 
-const char * get_color_mask_impl(int n) {
+const char * get_color_mask_impl(BlockId n) {
     switch (n) {
-    case 1: return
+    case BlockId::red: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -759,7 +769,7 @@ const char * get_color_mask_impl(int n) {
         """                "// E
         """                "// F
         ;
-    case 2: return
+    case BlockId::green: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -778,7 +788,7 @@ const char * get_color_mask_impl(int n) {
         """                "// E
         """                "// F
         ;
-    case 3: return
+    case BlockId::blue: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -797,7 +807,7 @@ const char * get_color_mask_impl(int n) {
         """                "// E
         """                "// F
         ;
-    case 4: return
+    case BlockId::yellow: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -816,7 +826,7 @@ const char * get_color_mask_impl(int n) {
         """                "// E
         """                "// F
         ;
-    case 5: return
+    case BlockId::magenta: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -845,7 +855,7 @@ const char * verify_16x16(const char * str) {
     throw std::invalid_argument("mask must be 16x16");
 }
 
-const char * get_special_block(int x) {
+const char * get_special_block(BlockId x) {
     return verify_16x16(get_special_block_impl(x));
 }
 
@@ -1179,9 +1189,9 @@ const char * get_edge_mask_impl(const TileEdges & edges) {
     throw std::invalid_argument("");
 }
 
-const char * get_special_block_impl(int x) {
+const char * get_special_block_impl(BlockId x) {
     switch (x) {
-    case 6: return
+    case BlockId::glass: return
         // 0123456789ABCDEF
         """XXXXXXXXXXXXXXXX"// 0
         """Xxx          xxX"// 1
@@ -1200,7 +1210,7 @@ const char * get_special_block_impl(int x) {
         """Xxx       x  xxX"// E
         """XXXXXXXXXXXXXXXX"// F
         ;
-    case 7: return
+    case BlockId::hard_glass: return
         // 0123456789ABCDEF
         """XXXXXXXXXXXXXXXX"// 0
         """X  xX  xX  xX xX"// 1

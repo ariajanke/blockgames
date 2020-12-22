@@ -50,7 +50,7 @@ int main(int argc, char ** argv) {
     });
 
 #   ifdef MACRO_TEST_DRIVER_ENTRY_FUNCTION
-    assert(MACRO_TEST_DRIVER_ENTRY_FUNCTION() == 0);
+    MACRO_TEST_DRIVER_ENTRY_FUNCTION();
 #   endif
 
     std::unique_ptr<AppState> app_state = std::make_unique<DialogState>();

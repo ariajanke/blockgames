@@ -43,7 +43,7 @@ ConstScenarioPtr move(ScenarioPtr &);
 
 class BoardBase : public sf::Drawable {
 public:
-    using ColorPair = std::pair<int, int>;
+    using ColorPair = std::pair<BlockId, BlockId>;
     static const ColorPair k_empty_pair;
     int width() const { return blocks().width(); }
     int height() const { return blocks().height(); }
@@ -98,14 +98,14 @@ public:
     static constexpr const int k_not_any_board = -1;
     virtual void increment_score(int board, int delta) = 0;
     virtual void reset_score(int board) = 0;
-    virtual void set_next_pair(int board, int first, int second) = 0;
+    virtual void set_next_pair(int board, BlockId first, BlockId second) = 0;
     virtual ~PuyoScoreBoardBase() {}
 
     static PuyoScoreBoardBase & null_instance() {
         class NullScoreBoard final : public PuyoScoreBoardBase {
             void increment_score(int, int) override {}
             void reset_score(int) override {}
-            void set_next_pair(int, int, int) override {}
+            void set_next_pair(int, BlockId, BlockId) override {}
         };
         static NullScoreBoard inst;
         return inst;
@@ -126,7 +126,7 @@ public:
     void set_size(int width, int height);
 
     void update(double) override;
-    void push_falling_piece(int first, int second);
+    void push_falling_piece(BlockId first, BlockId second);
     void push_fall_in_blocks(const BlockGrid &);
 
     bool is_ready() const override;
@@ -172,15 +172,17 @@ public:
     static constexpr const int k_max_possible_score = 999999;
     void increment_score(int board, int delta) override;
     void reset_score(int board) override;
-    void set_next_pair(int board, int first, int second) override;
+    void set_next_pair(int board, BlockId first, BlockId second) override;
     int width() const { return 3; }
     int take_last_delta(int board);
 
 private:
+    using ColorPair = PuyoBoard::ColorPair;
+
     void draw(sf::RenderTarget &, sf::RenderStates) const override;
 
-    std::pair<int, int> m_next_piece    = PuyoBoard::k_empty_pair;
-    std::pair<int, int> m_next_p2_piece = PuyoBoard::k_empty_pair;
+    ColorPair m_next_piece    = PuyoBoard::k_empty_pair;
+    ColorPair m_next_p2_piece = PuyoBoard::k_empty_pair;
 
     int m_p1_delta = 0, m_p2_delta = 0;
 
@@ -193,7 +195,7 @@ class PuyoStateN final : public BoardState {
 public:
     struct ContinueFall {};
     // needed by Scenario
-    using Response = MultiType<std::pair<int, int>, BlockGrid, ContinueFall>;
+    using Response = MultiType<std::pair<BlockId, BlockId>, BlockGrid, ContinueFall>;
     explicit PuyoStateN(int scenario_number);
     explicit PuyoStateN(ScenarioPtr sptr):
         m_current_scenario(std::move(sptr))

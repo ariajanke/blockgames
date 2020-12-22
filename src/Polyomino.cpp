@@ -22,9 +22,9 @@
 #include <cassert>
 
 namespace {
-
-using Block = Polyomino::Block;
-
+#if 0
+using BlockId = Polyomino::Block;
+#endif
 Polyomino to_polyomino(std::initializer_list<VectorI> &&);
 
 } // end of <anonymous> namespace
@@ -134,9 +134,11 @@ Polyomino to_polyomino(std::initializer_list<VectorI> &&);
         Vec(0, -1),
         Vec(0,  0), Vec(1,  0),
     });
+#   if 0
     Grid<int> g;
     g.set_size(10, 20);
     assert(!get_pm(Pe::l).obstructed_by(g));
+#   endif
     get_pm(Pe::n) = to_polyomino({
                     Vec(1, -2),
                     Vec(1, -1),
@@ -233,13 +235,13 @@ void Polyomino::place(BlockGrid & grid) const {
     }
 }
 
-void Polyomino::set_colors(int i)
+void Polyomino::set_colors(BlockId i)
     { for (auto & block : m_blocks) { block.color = i; } }
 
 int Polyomino::block_count() const
     { return int(m_blocks.size()); }
 
-int Polyomino::block_color(int i) const
+BlockId Polyomino::block_color(int i) const
     { return m_blocks[std::size_t(i)].color; }
 
 VectorI Polyomino::block_location(int i) const
@@ -312,13 +314,15 @@ const char * to_string(Polyomino::PolyominoSet set) {
 
 namespace {
 
-std::vector<Block> to_blocks(std::initializer_list<VectorI> &&);
+using PolyBlock = Polyomino::Block;
+
+std::vector<PolyBlock> to_blocks(std::initializer_list<VectorI> &&);
 
 Polyomino to_polyomino(std::initializer_list<VectorI> && offsets)
     { return Polyomino(to_blocks(std::move(offsets))); }
 
-std::vector<Block> to_blocks(std::initializer_list<VectorI> && offsets) {
-    std::vector<Block> rv;
+std::vector<PolyBlock> to_blocks(std::initializer_list<VectorI> && offsets) {
+    std::vector<PolyBlock> rv;
     rv.reserve(offsets.size());
     for (auto r : offsets) {
         rv.emplace_back(r, k_empty_block);

@@ -27,9 +27,9 @@ namespace {
 
 std::array<VectorI, 4> get_neighbor_positions_for(VectorI);
 
-void pop_special_neighbors(Grid<int> &, VectorI location, PopEffects &);
+void pop_special_neighbors(BlockGrid &, VectorI location, PopEffects &);
 
-Grid<bool> get_columns_popped_blocks(const Grid<int> &, int pop_requirement);
+Grid<bool> get_columns_popped_blocks(const BlockGrid &, int pop_requirement);
 
 [[nodiscard]] inline auto make_finisher(PopEffects & pop_effects) {
     struct FinisherRaii {
@@ -54,8 +54,8 @@ Grid<bool> get_columns_popped_blocks(const Grid<int> &, int pop_requirement);
 /* static */ FallBlockEffects & FallBlockEffects::default_instance() {
     class DefInst final : public FallBlockEffects {
         void start() override {}
-        void post_stationary_block(VectorI, int) override {}
-        void post_block_fall(VectorI, VectorI, int) override {}
+        void post_stationary_block(VectorI, BlockId) override {}
+        void post_block_fall(VectorI, VectorI, BlockId) override {}
         void finish() override {}
     };
     static DefInst inst;
@@ -64,7 +64,7 @@ Grid<bool> get_columns_popped_blocks(const Grid<int> &, int pop_requirement);
 
 FallBlockEffects::~FallBlockEffects() {}
 
-void make_blocks_fall(SubGrid<int> grid, FallBlockEffects & effects) {
+void make_blocks_fall(BlockSubGrid grid, FallBlockEffects & effects) {
     effects.start();
     auto finisher = make_finisher(effects);
 
@@ -91,7 +91,7 @@ void make_blocks_fall(SubGrid<int> grid, FallBlockEffects & effects) {
     }}
 }
 
-void make_tetris_rows_fall(SubGrid<int> blocks, FallBlockEffects & effects) {
+void make_tetris_rows_fall(BlockSubGrid blocks, FallBlockEffects & effects) {
     effects.start();
     auto finisher = make_finisher(effects);
 
@@ -120,7 +120,7 @@ void make_tetris_rows_fall(SubGrid<int> blocks, FallBlockEffects & effects) {
     }
 }
 
-void make_all_blocks_fall_out(SubGrid<int> blocks, FallBlockEffects & effects) {
+void make_all_blocks_fall_out(BlockSubGrid blocks, FallBlockEffects & effects) {
     effects.start();
     auto finisher = make_finisher(effects);
     for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
@@ -136,7 +136,7 @@ void make_all_blocks_fall_out(SubGrid<int> blocks, FallBlockEffects & effects) {
     struct NullPopEffects : public PopEffects {
         void start() override {}
         void finish() override {}
-        void post_pop_effect(VectorI, int) override {}
+        void post_pop_effect(VectorI, BlockId) override {}
         void post_group(const std::vector<VectorI> &) override {}
     };
     static NullPopEffects inst;
@@ -145,7 +145,7 @@ void make_all_blocks_fall_out(SubGrid<int> blocks, FallBlockEffects & effects) {
 
 PopEffects::~PopEffects() {}
 
-std::vector<VectorI> select_connected_blocks(const Grid<int> & grid, VectorI r) {
+std::vector<VectorI> select_connected_blocks(const BlockGrid & grid, VectorI r) {
     std::vector<VectorI> rv;
     Grid<bool> explored;
     rv.push_back(r);
@@ -155,13 +155,13 @@ std::vector<VectorI> select_connected_blocks(const Grid<int> & grid, VectorI r) 
 }
 
 void select_connected_blocks
-    (const ConstSubGrid<int> & grid,
+    (const ConstBlockSubGrid & grid,
      std::vector<VectorI> & selected, Grid<bool> & explored)
 {
     assert(selected.size() == 1);
     if (explored(selected[0])) return;
     explored(selected[0]) = true;
-    int color = grid(selected[0]);
+    auto color = grid(selected[0]);
     std::size_t last     = 0;
     std::size_t old_size = selected.size();
     while (true) {
@@ -183,7 +183,7 @@ void select_connected_blocks
 }
 
 bool pop_connected_blocks
-    (Grid<int> & grid, int amount_required, PopEffects & effects)
+    (BlockGrid & grid, int amount_required, PopEffects & effects)
 {
     effects.start();
     auto finisher = make_finisher(effects);
@@ -211,7 +211,7 @@ bool pop_connected_blocks
     return any_popped;
 }
 
-bool pop_columns_blocks(Grid<int> & blocks, int pop_requirement, PopEffects & effects) {
+bool pop_columns_blocks(BlockGrid & blocks, int pop_requirement, PopEffects & effects) {
     effects.start();
     auto finisher = make_finisher(effects);
     auto popped_blocks = get_columns_popped_blocks(blocks, pop_requirement);
@@ -224,7 +224,7 @@ bool pop_columns_blocks(Grid<int> & blocks, int pop_requirement, PopEffects & ef
     return std::any_of(popped_blocks.begin(), popped_blocks.end(), [](bool b) { return b; });
 }
 
-int clear_tetris_rows(Grid<int> & blocks, PopEffects & effects) {
+int clear_tetris_rows(BlockGrid & blocks, PopEffects & effects) {
     effects.start();
     auto finisher = make_finisher(effects);
 
@@ -252,11 +252,11 @@ std::array<VectorI, 4> get_neighbor_positions_for(VectorI v) {
              VectorI(0, 1) + v, VectorI(0, -1) + v };
 }
 
-void pop_special_neighbors(Grid<int> & grid, VectorI location, PopEffects & effects) {
+void pop_special_neighbors(BlockGrid & grid, VectorI location, PopEffects & effects) {
     for (auto n : get_neighbor_positions_for(location)) {
         if (!grid.has_position(n)) continue;
         switch (grid(n)) {
-        case 6: case 7:
+        case BlockId::hard_glass: case BlockId::glass:
             effects.post_pop_effect(n, grid(n));
             grid(n) = decay_block(grid(n));
             break;
@@ -265,7 +265,7 @@ void pop_special_neighbors(Grid<int> & grid, VectorI location, PopEffects & effe
     }
 }
 
-Grid<bool> get_columns_popped_blocks(const Grid<int> & blocks, int pop_requirement) {
+Grid<bool> get_columns_popped_blocks(const BlockGrid & blocks, int pop_requirement) {
     Grid<bool> rv;
     rv.reserve(blocks.size());
     rv.set_size(blocks.width(), blocks.height(), false);

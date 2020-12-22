@@ -27,7 +27,7 @@
 
 namespace {
 
-VectorI get_spawn_point(const ConstSubGrid<int> &);
+VectorI get_spawn_point(const ConstBlockSubGrid &);
 
 std::string pad_to_right(std::string &&, int);
 
@@ -95,7 +95,8 @@ void PauseableBoard::handle_event(PlayControlEvent event) {
 
 // ----------------------------------------------------------------------------
 
-const std::pair<int, int> BoardBase::k_empty_pair = std::make_pair(k_empty_block, k_empty_block);
+const std::pair<BlockId, BlockId> BoardBase::k_empty_pair =
+    std::make_pair(k_empty_block, k_empty_block);
 
 void PuyoBoard::set_size(int width, int height) {
     m_blocks.clear();
@@ -126,7 +127,7 @@ void PuyoBoard::update(double et) {
     std::invoke(m_update_func, this, et);
 }
 
-void PuyoBoard::push_falling_piece(int first, int second) {
+void PuyoBoard::push_falling_piece(BlockId first, BlockId second) {
     if (m_piece.color() == k_empty_block) {
         assert(m_piece.other_color() == k_empty_block);
         m_piece = FallingPiece(first, second);
@@ -160,8 +161,10 @@ bool PuyoBoard::is_gameover() const {
 /* private */ void PuyoBoard::draw(sf::RenderTarget & target, sf::RenderStates states) const {
     if (m_pef.has_effects()) {
         target.draw(m_pef, states);
+        return;
     } else if (m_fef.has_effects()) {
         target.draw(m_fef, states);
+        return;
     } else {
         sf::Sprite brush;
         brush.setTexture(load_builtin_block_texture());
@@ -184,7 +187,7 @@ bool PuyoBoard::is_gameover() const {
 
     sf::Sprite brush;
     brush.setTexture(load_builtin_block_texture());
-    auto draw_block = [&target, &brush, &states](int color, VectorI r) {
+    auto draw_block = [&target, &brush, &states](BlockId color, VectorI r) {
         brush.setTextureRect(texture_rect_for(color));
         brush.setPosition(sf::Vector2f(r));
         brush.setColor(base_color_for_block(color));
@@ -283,7 +286,7 @@ void PuyoScoreBoard::reset_score(int board) {
         m_first_player_score = 0;
 }
 
-void PuyoScoreBoard::set_next_pair(int board, int first, int second) {
+void PuyoScoreBoard::set_next_pair(int board, BlockId first, BlockId second) {
     switch (board) {
     case 0: m_next_piece    = std::make_pair(first, second); return;
     case 1: m_next_p2_piece = std::make_pair(first, second); return;
@@ -307,7 +310,7 @@ int PuyoScoreBoard::take_last_delta(int board) {
     static const auto k_empty_pair = BoardBase::k_empty_pair;
     sf::Sprite brush;
     brush.setTexture(load_builtin_block_texture());
-    auto draw_block = [&target, &brush, &states](int color, VectorI r) {
+    auto draw_block = [&target, &brush, &states](BlockId color, VectorI r) {
         brush.setTextureRect(texture_rect_for(color));
         brush.setPosition(sf::Vector2f(r));
         brush.setColor(base_color_for_block(color));
@@ -392,13 +395,13 @@ PuyoStateN::PuyoStateN(int scenario_number) {
     if (!response.is_valid()) {
         throw std::runtime_error("idk what to do");
     }
-    if (auto * cpair = response.as_pointer<std::pair<int, int>>()) {
+    if (auto * cpair = response.as_pointer<std::pair<BlockId, BlockId>>()) {
         auto pair = *cpair;
         if (pair == Scenario::k_random_pair) {
             pair = std::make_pair(random_color(m_rng), random_color(m_rng));
         }
         m_board.push_falling_piece(pair.first, pair.second);
-    } else if (auto * fallins = response.as_pointer<Grid<int>>()) {
+    } else if (auto * fallins = response.as_pointer<Grid<BlockId>>()) {
         m_board.push_fall_in_blocks(*fallins);
     } else if (response.is_type<ContinueFall>()) {
         m_board.push_fall_in_blocks(BlockGrid());
@@ -511,7 +514,10 @@ PuyoStateVS::PuyoStateVS() {}
             fallins.set_size(board.width(), board.height(), k_empty_block);
             for (VectorI r; r != fallins.end_position(); r = fallins.next(r)) {
                 if (punishment == 0) break;
-                auto id = (IntDistri(0, 3)(m_refuge_rng) == 0) ? k_hard_glass_block : k_glass_block;
+                auto id = (IntDistri(0, 3)(m_refuge_rng) == 0) ? BlockId::hard_glass : BlockId::glass;
+#               if 0
+                            k_hard_glass_block : k_glass_block;
+#               endif
                 fallins(r) = id;
                 --punishment;
             }
@@ -722,7 +728,7 @@ void PuyoState::handle_response(const Response & response) {
 #endif
 namespace {
 
-VectorI get_spawn_point(const ConstSubGrid<int> & board) {
+VectorI get_spawn_point(const ConstBlockSubGrid & board) {
     auto w = board.width();
     auto x = (w / 2) - (w % 2 ? 0 : 1);
     return VectorI(x, 0);

@@ -20,9 +20,9 @@
 #pragma once
 
 #include "Defs.hpp"
-
+#if 0
 #include <common/SubGrid.hpp>
-
+#endif
 namespace sf { class RenderTarget; }
 
 sf::Image to_image(const Grid<sf::Color> &);
@@ -39,9 +39,9 @@ const sf::Texture & load_builtin_block_texture();
 
 // helpers to render tiles
 
-sf::IntRect texture_rect_for(int, TileEdges);
+sf::IntRect texture_rect_for(BlockId, TileEdges);
 
-sf::IntRect texture_rect_for(int);
+sf::IntRect texture_rect_for(BlockId);
 
 sf::IntRect texture_rect_for_background();
 
@@ -54,20 +54,20 @@ sf::IntRect texture_rect_for_next();
 
 sf::IntRect texture_rect_for_char(char);
 
-sf::Color base_color_for_block(int);
+sf::Color base_color_for_block(BlockId);
 
 sf::Color brighten_color(sf::Color, double);
 
 void render_blocks
-    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &);
+    (const ConstBlockSubGrid &, const sf::Sprite &, sf::RenderTarget &);
 
 void render_merged_blocks
-    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &);
+    (const ConstBlockSubGrid &, const sf::Sprite &, sf::RenderTarget &);
 
 void render_blocks
-    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &,
+    (const ConstBlockSubGrid &, const sf::Sprite &, sf::RenderTarget &,
      sf::RenderStates);
 
 void render_merged_blocks
-    (const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &,
+    (const ConstBlockSubGrid &, const sf::Sprite &, sf::RenderTarget &,
      sf::RenderStates);

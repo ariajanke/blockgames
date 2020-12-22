@@ -60,8 +60,8 @@ void PolyominoButton::draw(sf::RenderTarget & target, sf::RenderStates states) c
         + VectorF(1.f, 1.f)*float(k_pixels_for_blocks)*0.5f
         - VectorF(1.f, 1.f)*float(k_block_size)*0.5f;
     brush.setTexture(load_builtin_block_texture());
-    brush.setTextureRect(texture_rect_for(1));
-    brush.setColor(m_on ? base_color_for_block(1) : sf::Color(100, 100, 100));
+    brush.setTextureRect(texture_rect_for(BlockId::red));
+    brush.setColor(m_on ? base_color_for_block(BlockId::red) : sf::Color(100, 100, 100));
     brush.scale(float(m_scale), float(m_scale));
     sf::FloatRect bounds(location(), sf::Vector2f(width(), height()));
     for (int i = 0; i != m_polyomino.block_count(); ++i) {

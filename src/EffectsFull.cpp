@@ -34,12 +34,6 @@ using Rng = std::default_random_engine;
 template <typename T, bool (*del_f)(const T &)>
 void remove_from_container(std::vector<T> &);
 
-#if 0
-[[deprecated]] void render_blocks
-    (const ConstSubGrid<int> &, const sf::Texture &, sf::RenderTarget &,
-     bool do_block_merging);
-
-#endif
 } // end of <anonymous> namespace
 
 void FallEffectsFull::restart() {
@@ -77,7 +71,7 @@ bool FallEffectsFull::has_effects() const {
 }
 
 void FallEffectsFull::do_fall_in
-    (Grid<int> & original_board, const Grid<int> & board_of_fallins)
+    (BlockGrid & original_board, const BlockGrid & board_of_fallins)
 {
     if (original_board.width () != board_of_fallins.width () ||
         original_board.height() != board_of_fallins.height())
@@ -119,9 +113,9 @@ void FallEffectsFull::do_fall_in
             assert(board_of_fallins(x, fallins_y) != k_empty_block);
             assert(original_board(x, y) == k_empty_block);
 
-            int fallins_block = board_of_fallins(x, fallins_y);
+            auto fallins_block = board_of_fallins(x, fallins_y);
             original_board(x, y) = fallins_block;
-            post_block_fall(VectorI(x, y - lowest_empty - 1), // -1 - (lowest_empty - y)),
+            post_block_fall(VectorI(x, y - lowest_empty - 1),
                             VectorI(x, y), fallins_block);
             --fallins_y;
         }
@@ -130,17 +124,17 @@ void FallEffectsFull::do_fall_in
 }
 
 /* private */ void FallEffectsFull::start() {
-    for (int & c : m_blocks_copy) c = k_empty_block;
+    for (auto & c : m_blocks_copy) c = k_empty_block;
 }
 
 /* private */ void FallEffectsFull::post_stationary_block
-    (VectorI at, int color)
+    (VectorI at, BlockId color)
 {
     m_blocks_copy(m_transf_v(at)) = color;
 }
 
 /* private */ void FallEffectsFull::post_block_fall
-    (VectorI from, VectorI to, int color)
+    (VectorI from, VectorI to, BlockId color)
 {
     if (from == to) {
         throw std::invalid_argument("FallEffectsFull::post_block_fall: from and to cannot be the same location");
@@ -172,7 +166,7 @@ void FallEffectsFull::do_fall_in
         target.draw(brush, states);
     }
     brush.setPosition(0.f, 0.f);
-    using Fp = void(*)(const ConstSubGrid<int> &, const sf::Sprite &, sf::RenderTarget &, sf::RenderStates);
+    using Fp = void(*)(const ConstBlockSubGrid &, const sf::Sprite &, sf::RenderTarget &, sf::RenderStates);
     (m_render_merged ? Fp(render_merged_blocks) : Fp(render_blocks))(m_blocks_copy, brush, target, states);
 }
 
@@ -181,10 +175,6 @@ void FallEffectsFull::do_fall_in
 /* static */ const VectorD PopEffectsPartial::CharEffect::k_velocity(0, -33);
 
 void PopEffectsPartial::update(double et) {
-#   if 0
-    static const auto is_flash_effect_done = [](const FlashEffect & effect)
-        { return effect.remaining <= 0.; };
-#   endif
     for (auto & effect : m_flash_effects) {
         effect.remaining -= et;
         if (ready_to_delete(effect)) {
@@ -192,24 +182,12 @@ void PopEffectsPartial::update(double et) {
         }
     }
 
-#   if 0
-    m_flash_effects.erase(
-        std::remove_if(m_flash_effects.begin(), m_flash_effects.end(), is_flash_effect_done),
-        m_flash_effects.end());
-#   endif
     static const VectorD k_gravity(0, PieceEffect::k_gravity);
     for (auto & effect : m_piece_effects) {
         effect.velocity += k_gravity*et;
         effect.location += effect.velocity*et;
         effect.remaining -= et;
     }
-#   if 0
-    static const auto is_piece_effect_done = [](const PieceEffect & effect)
-        { return effect.remaining <= 0.; };
-    m_piece_effects.erase(
-        std::remove_if(m_piece_effects.begin(), m_piece_effects.end(), is_piece_effect_done),
-        m_piece_effects.end());
-#   endif
 
     for (auto & effect : m_char_effects) {
         effect.remaining -= et;
@@ -233,7 +211,7 @@ bool PopEffectsPartial::has_effects() const {
 
 }
 
-/* protected */ void PopEffectsPartial::post_pop_effect(VectorI at, int block_id) {
+/* protected */ void PopEffectsPartial::post_pop_effect(VectorI at, BlockId block_id) {
     // we can insert further pop behaviors here
     FlashEffect effect;
     effect.at = at;
@@ -255,9 +233,6 @@ bool PopEffectsPartial::has_effects() const {
     auto start = at*k_block_size + VectorI(1, 1)*char_width - VectorI(width, height)/2;
     for (auto c : delta_string) {
         CharEffect effect;
-#       if 0
-        //effect.texture_offset = VectorI(texture_rect_for_char(c).left, texture_rect_for_char(c).top);
-#       endif
         effect.identity = c;
         effect.location = VectorD(start);
         start.x += char_width;
@@ -291,14 +266,7 @@ bool PopEffectsPartial::has_effects() const {
     brush.setTexture(*m_texture);
     brush.setTextureRect(texture_rect_for(effect.block_id));
     brush.setColor(brighten_by(base_color_for_block(effect.block_id), effect));
-#   if 0
-    bind_block_to_sprite(spt, effect.block_id, TileEdges().set());
-#   endif
     brush.setPosition(float(effect.at.x*k_block_size), float(effect.at.y*k_block_size));
-#   if 0
-    sf::Color c = block_is_color(effect.block_id) ? to_sfcolor(effect.block_id) : sf::Color::White;
-    spt.setColor(brighten_by(c, effect));
-#   endif
     target.draw(brush, states);
 }
 
@@ -384,53 +352,7 @@ bool PopEffectsPartial::has_effects() const {
     }
 }
 
-// ----------------------------------------------------------------------------
-#if 0
-void render_merged_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Texture & texture,
-     sf::RenderTarget & target)
-{ render_blocks(blocks, texture, target, true); }
-
-void render_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Texture & texture,
-     sf::RenderTarget & target)
-{ render_blocks(blocks, texture, target, false); }
-#endif
-// not obvious on how to keep this
-#if 0
-void bind_block_to_sprite(sf::Sprite & brush, int block_id, TileEdges edges) {
-    if (block_is_color(block_id)) {
-        brush.setColor(to_sfcolor(block_id));
-        brush.setTextureRect(texture_rect_for(edges));
-    } else {
-        brush.setColor(sf::Color::White);
-        int x_offset = (block_id - k_glass_block)*k_block_size;
-        brush.setTextureRect(sf::IntRect(
-            x_offset, 4*k_block_size, k_block_size, k_block_size
-        ));
-    }
-}
-#endif
 namespace {
-#if 0
-TileEdges get_edges_for(const ConstSubGrid<int> &, VectorI);
-#endif
-#if 0
-void render_blocks
-    (const ConstSubGrid<int> & blocks, const sf::Texture & texture,
-     sf::RenderTarget & target, bool do_block_merging)
-{
-    sf::Sprite brush;
-    brush.setTexture(texture);
-    for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
-        if (blocks(r) == k_empty_block) continue;
-        brush.setPosition(float(r.x*k_block_size), float(r.y*k_block_size));
-        auto edges = do_block_merging ? TileDrawer::get_edges_for(blocks, r) : TileEdges().flip();
-        bind_block_to_sprite(brush, blocks(r), edges);
-        target.draw(brush);
-    }
-}
-#endif
 
 template <typename T, bool (*del_f)(const T &)>
 void remove_from_container(std::vector<T> & cont) {

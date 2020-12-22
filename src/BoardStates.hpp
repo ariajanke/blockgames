@@ -62,8 +62,12 @@ protected:
     /** Sets board settings */
     void setup_(Settings &) final;
 
+#   if 0
     int random_color(Rng & rng) const
         { return IntDistri(1, m_max_colors)(rng); }
+#   endif
+    BlockId random_color(Rng & rng) const
+        { return ColorBlockDistri(m_max_colors)(rng); }
 
     void set_max_colors(int);
 
@@ -152,8 +156,8 @@ class SameGame final : public BoardState {
     void try_sweep();
 
     VectorI m_selection;
-    Grid<int> m_blocks;
-    Grid<int> m_sweep_temp;
+    BlockGrid m_blocks;
+    BlockGrid m_sweep_temp;
     SameGamePopEffects m_pop_ef;
     FallEffectsFull m_fall_ef;
     bool m_pop_singles_enabled = false;

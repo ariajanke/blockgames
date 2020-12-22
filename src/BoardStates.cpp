@@ -222,7 +222,7 @@ void PauseableWithFallingPieceState::handle_event(PlayControlEvent event) {
     const auto & polys = m_available_polyominos;
     const auto & piece = polys[IntDistri(0, polys.size() - 1)(m_rng)];
     m_piece = piece;
-    m_piece.set_colors(1 + ( (&piece - &polys.front()) % k_max_colors ) );
+    m_piece.set_colors(map_int_to_color(k_min_colors + ( (&piece - &polys.front()) % k_max_colors )));
     m_piece.set_location(m_blocks.width() / 2, 0);
 
     if (m_piece.obstructed_by(m_blocks)) {
@@ -234,7 +234,8 @@ void PauseableWithFallingPieceState::handle_event(PlayControlEvent event) {
 
 namespace {
 
-void flip_along_trace(const Grid<int> &, Grid<int> &);
+template <typename T>
+void flip_along_trace(const Grid<T> &, Grid<T> &);
 
 } // end of <anonymous> namespace
 
@@ -369,7 +370,8 @@ void SameGame::handle_event(PlayControlEvent event) {
 
 namespace {
 
-void flip_along_trace(const Grid<int> & source, Grid<int> & dest) {
+template <typename T>
+void flip_along_trace(const Grid<T> & source, Grid<T> & dest) {
     dest.clear();
     dest.set_size(source.height(), source.width());
     for (VectorI r; r != source.end_position(); r = source.next(r)) {

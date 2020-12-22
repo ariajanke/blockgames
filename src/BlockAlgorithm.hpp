@@ -20,16 +20,20 @@
 #pragma once
 
 #include "Defs.hpp"
-
+#if 0
 #include <common/SubGrid.hpp>
+
+using BlockSubGrid      = SubGrid     <BlockId>;
+using ConstBlockSubGrid = ConstSubGrid<BlockId>;
+#endif
 
 class FallBlockEffects {
 public:
     static FallBlockEffects & default_instance();
 
     virtual void start() = 0;
-    virtual void post_stationary_block(VectorI at, int block_id) = 0;
-    virtual void post_block_fall(VectorI from, VectorI to, int block_id) = 0;
+    virtual void post_stationary_block(VectorI at, BlockId) = 0;
+    virtual void post_block_fall(VectorI from, VectorI to, BlockId) = 0;
     virtual void finish() = 0;
 protected:
     FallBlockEffects() {}
@@ -37,12 +41,12 @@ protected:
 };
 
 void make_blocks_fall
-    (SubGrid<int>, FallBlockEffects & = FallBlockEffects::default_instance());
+    (BlockSubGrid, FallBlockEffects & = FallBlockEffects::default_instance());
 
 void make_tetris_rows_fall
-    (SubGrid<int>, FallBlockEffects & = FallBlockEffects::default_instance());
+    (BlockSubGrid, FallBlockEffects & = FallBlockEffects::default_instance());
 
-void make_all_blocks_fall_out(SubGrid<int>, FallBlockEffects &);
+void make_all_blocks_fall_out(BlockSubGrid, FallBlockEffects &);
 
 class PopEffects {
 public:
@@ -50,7 +54,7 @@ public:
 
     virtual void start() = 0;
     virtual void finish() = 0;
-    virtual void post_pop_effect(VectorI at, int block_id) = 0;
+    virtual void post_pop_effect(VectorI at, BlockId) = 0;
     virtual void post_group(const std::vector<VectorI> & group_locations) = 0;
 protected:
     PopEffects() {}
@@ -60,13 +64,13 @@ protected:
 // this is a pretty intense algorithm
 // so solid and numerous test cases are necessary
 void select_connected_blocks
-    (const ConstSubGrid<int> &, std::vector<VectorI> & selected, Grid<bool> & explored);
+    (const ConstBlockSubGrid &, std::vector<VectorI> & selected, Grid<bool> & explored);
 
-std::vector<VectorI> select_connected_blocks(const Grid<int> &, VectorI);
+std::vector<VectorI> select_connected_blocks(const BlockGrid &, VectorI);
 
-bool pop_connected_blocks(Grid<int> &, int amount_required, PopEffects & = PopEffects::default_instance());
+bool pop_connected_blocks(BlockGrid &, int amount_required, PopEffects & = PopEffects::default_instance());
 
 // wip
-bool pop_columns_blocks(Grid<int> &, int pop_requirement, PopEffects & = PopEffects::default_instance());
+bool pop_columns_blocks(BlockGrid &, int pop_requirement, PopEffects & = PopEffects::default_instance());
 
-int clear_tetris_rows(Grid<int> &, PopEffects & = PopEffects::default_instance());
+int clear_tetris_rows(BlockGrid &, PopEffects & = PopEffects::default_instance());

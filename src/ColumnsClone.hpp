@@ -26,18 +26,18 @@
 class ColumnsPiece final : public FallingPieceBase {
 public:
     static constexpr const int k_piece_size = 3;
-    using BlocksArray = std::array<std::pair<VectorI, int>, k_piece_size>;
+    using BlocksArray = std::array<std::pair<VectorI, BlockId>, k_piece_size>;
     ColumnsPiece() {}
-    ColumnsPiece(int bottom, int mid, int top);
+    ColumnsPiece(BlockId bottom, BlockId mid, BlockId top);
 
     void rotate_down();
     void rotate_up();
 
-    bool descend(const Grid<int> &);
-    void move_left(const Grid<int> &) override;
-    void move_right(const Grid<int> &) override;
+    bool descend(const BlockGrid &);
+    void move_left(const BlockGrid &) override;
+    void move_right(const BlockGrid &) override;
 
-    void place(Grid<int> &) const;
+    void place(BlockGrid &) const;
     // places piece at the top
     void set_column_position(int);
 
@@ -56,10 +56,10 @@ private:
     static VectorI offset_for(decltype(k_top));
 
     void rotate(int direction);
-    bool move(const Grid<int> &, VectorI offset);
+    bool move(const BlockGrid &, VectorI offset);
     void check_invarients() const;
 
-    std::array<int, k_piece_size> m_blocks = {};
+    std::array<BlockId, k_piece_size> m_blocks = {};
     VectorI m_bottom = VectorI(0, -1);
 };
 

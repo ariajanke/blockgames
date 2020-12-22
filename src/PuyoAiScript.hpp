@@ -64,6 +64,9 @@ public:
 
     static std::unique_ptr<AiScript> make_random_script();
 
+    // meant for test cases
+    const ControllerState & controller_state() const { return m_controller_state; }
+
 protected:
     virtual void play_board(const BoardBase &, StatesArray &) = 0;
 
@@ -105,10 +108,10 @@ public:
     void play_board(const BoardBase &, StatesArray &) override;
 
     static Grid<bool> compute_reachable_blocks
-        (VectorI pivot, const ConstSubGrid<int> & blocks);
+        (VectorI pivot, const ConstBlockSubGrid &);
 
     static Grid<bool> compute_reachable_blocks
-        (VectorI pivot, const ConstSubGrid<int> & blocks, Grid<bool> && reachables);
+        (VectorI pivot, const ConstBlockSubGrid &, Grid<bool> && reachables);
 
     VectorI pivot_target() const noexcept { return m_pivot_target; }
     VectorI adjacent_target() const noexcept { return m_adjacent_target; }
@@ -130,7 +133,7 @@ private:
     // sorts closest location first (x-ways)
     static void find_reachable_ground_blocks
         (VectorI pivot, std::vector<VectorI> & accessibles,
-         const ConstSubGrid<int> & blocks);
+         const ConstBlockSubGrid & blocks);
 
     std::vector<VectorI> m_accessibles;
     ControllerState m_controller_state;

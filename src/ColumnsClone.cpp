@@ -30,8 +30,8 @@ int wrap_index(const Cont &, int);
 
 } // end of <anonymous> namespace
 
-ColumnsPiece::ColumnsPiece(int bottom, int mid, int top) {
-    for (int b : { bottom, mid, top }) {
+ColumnsPiece::ColumnsPiece(BlockId bottom, BlockId mid, BlockId top) {
+    for (auto b : { bottom, mid, top }) {
         if (is_block_color(b)) continue;
         throw std::invalid_argument("ColumnsPiece::ColumnsPiece: all blocks must be colors.");
     }
@@ -47,21 +47,20 @@ void ColumnsPiece::rotate_down()
 void ColumnsPiece::rotate_up()
     { rotate(k_bottom - k_top); }
 
-bool ColumnsPiece::descend(const Grid<int> & grid)
+bool ColumnsPiece::descend(const BlockGrid & grid)
     { return move(grid, VectorI(0, 1)); }
 
-void ColumnsPiece::move_left(const Grid<int> & grid)
+void ColumnsPiece::move_left(const BlockGrid & grid)
     { (void)move(grid, VectorI(-1, 0)); }
 
-void ColumnsPiece::move_right(const Grid<int> & grid)
+void ColumnsPiece::move_right(const BlockGrid & grid)
     { (void)move(grid, VectorI(1, 0)); }
 
-void ColumnsPiece::place(Grid<int> & grid) const {
+void ColumnsPiece::place(BlockGrid & grid) const {
     auto my_blocks = as_blocks();
     for (auto [pos, id] : my_blocks) {
         // this would prevent piece placement at the top if it won't fit
         if (!grid.has_position(pos)) continue;
-        //if (grid(pos) != k_empty_block) continue;
         grid(pos) = id;
     }
 }
@@ -113,7 +112,7 @@ VectorI ColumnsPiece::bottom() const
     check_invarients();
 }
 
-/* private */ bool ColumnsPiece::move(const Grid<int> & grid, VectorI offset) {
+/* private */ bool ColumnsPiece::move(const BlockGrid & grid, VectorI offset) {
     int old_inside_of_grid = 0;
     int new_inside_of_grid = 0;
     for (auto pos : k_positions) {
@@ -137,7 +136,7 @@ VectorI ColumnsPiece::bottom() const
 }
 
 /* private */ void ColumnsPiece::check_invarients() const {
-    for (int i : m_blocks) {
+    for (auto i : m_blocks) {
         assert(is_block_color(i) || i == k_empty_block);
     }
     assert(m_bottom.x >=  0);

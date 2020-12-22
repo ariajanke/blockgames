@@ -21,6 +21,8 @@
 
 #include "PuyoState.hpp"
 
+#include <common/TestSuite.hpp>
+
 void ControllerState::update
     (IdList new_presses, IdList new_releases, BoardBase & board)
 {
@@ -140,14 +142,14 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
 }
 
 /* static */ Grid<bool> SimpleMatcher::compute_reachable_blocks
-    (VectorI pivot, const ConstSubGrid<int> & blocks)
+    (VectorI pivot, const ConstBlockSubGrid & blocks)
 {
     Grid<bool> reachables;
     return compute_reachable_blocks(pivot, blocks, std::move(reachables));
 }
 
 /* static */ Grid<bool> SimpleMatcher::compute_reachable_blocks
-    (VectorI pivot, const ConstSubGrid<int> & blocks, Grid<bool> && reachables)
+    (VectorI pivot, const ConstBlockSubGrid & blocks, Grid<bool> && reachables)
 {
     reachables.clear();
     if (!blocks.has_position(pivot)) {
@@ -170,12 +172,21 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
         bool obstructed = false;
         for (int i = beg; i != lim; i += step) {
             VectorI r(i, pivot.y);
-            if (blocks(r) == k_empty_block && !obstructed) continue;
             bool floor_below = !blocks.has_position(r + VectorI(0, 1));
             if (!floor_below) floor_below = blocks(r + VectorI(0, 1)) != k_empty_block;
-            if (i - blocks.width() > 1 && floor_below) continue;
-            obstructed = true;
-            reachables(r) = false;
+
+            if (blocks(r) != k_empty_block || obstructed) {
+                obstructed = true;
+                reachables(r) = false;
+            } else if (magnitude(i - pivot.x) <= 1) {
+                // (do nothing)
+            } else if (floor_below) {
+                // must be support by a "floor" and unobstructed
+                // (do nothing)
+            } else {
+                obstructed = true;
+                reachables(r) = false;
+            }
         }
     }
 
@@ -276,7 +287,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
 {
     static constexpr const auto k_rotate = PlayControlId::rotate_right;
     auto & rotate_state = con_states[static_cast<std::size_t>(k_rotate)];
-    if (piece.location() - piece.other_location() == VectorI(0, 1)) {
+    if (piece.location() - piece.other_location() == VectorI(0, -1)) {
         rotate_state = false;
     } else {
         rotate_state = !m_controller_state.is_pressed(k_rotate);
@@ -289,7 +300,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
     find_reachable_ground_blocks(current_piece.location(), m_accessibles, blocks);
     auto acc_end = m_accessibles.end();
 
-    auto do_match = [&blocks](int color, VectorI r) {
+    auto do_match = [&blocks](BlockId color, VectorI r) {
         auto below = r + VectorI(0, 1);
         if (!blocks.has_position(below)) return false;
         auto get_n = [&blocks](VectorI r)
@@ -321,7 +332,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
 // sorts closest location first (x-ways)
 /* private static */ void SimpleMatcher::find_reachable_ground_blocks
     (VectorI pivot, std::vector<VectorI> & accessibles,
-     const ConstSubGrid<int> & blocks)
+     const ConstBlockSubGrid & blocks)
 {
     accessibles.clear();
     if (!blocks.has_position(pivot)) return;
