@@ -68,15 +68,10 @@ struct GetEdgeValue<edge, Types...> : public GetEdgeValue<Types...> {
 // [0]    : empty
 // [1   5]: colored normal blocks
 // [6 ...]: special blocks
-#if 0
-[[maybe_unused]] constexpr const int k_empty_block        =  0;
-#endif
+
 [[maybe_unused]] constexpr const int k_min_colors         =  1;
 [[maybe_unused]] constexpr const int k_max_colors         =  5;
-#if 0
-[[maybe_unused]] constexpr const int k_glass_block        =  6;
-[[maybe_unused]] constexpr const int k_hard_glass_block   =  7;
-#endif
+
 [[maybe_unused]] constexpr const int k_min_board_size     =  2;
 [[maybe_unused]] constexpr const int k_max_board_size     = 30;
 [[maybe_unused]] constexpr const int k_free_play_scenario = -1;
@@ -139,35 +134,18 @@ using BlockGrid         =         Grid<BlockId>;
 using BlockSubGrid      =      SubGrid<BlockId>;
 using ConstBlockSubGrid = ConstSubGrid<BlockId>;
 
-BlockGrid make_grid(std::initializer_list<std::initializer_list<BlockId>>);
-
 bool is_grid_the_same(const BlockGrid &, std::initializer_list<std::initializer_list<BlockId>>);
-#if 0
-inline bool is_block_color(int x)
-    { return x > static_cast<int>(k_empty_block) && x < k_glass_block; }
-#endif
-inline bool is_block_color(BlockId bid) {
-    using namespace BlockIdShorthand;
-    switch (bid) {
-    case r_: case g_: case b_: case m_: case y_: return true;
-    default: return false;
-    }
-}
-#if 0
-inline int decay_block(int x)
-    { return x == k_hard_glass_block ? k_glass_block : static_cast<int>(k_empty_block); }
-#endif
-inline BlockId decay_block(BlockId bid) {
-    switch (bid) {
-    case BlockId::glass     : return BlockId::empty;
-    case BlockId::hard_glass: return BlockId::glass;
-    default: return bid;
-    }
-}
+
+bool is_block_color(BlockId);
+
+BlockId decay_block(BlockId);
+
+BlockId map_int_to_color(int);
 
 class ColorBlockDistri {
 public:
     ColorBlockDistri(int max_colors): m_max_colors(max_colors) {}
+
     template <typename Rng>
     BlockId operator () (Rng & rng) const {
         auto rv = static_cast<BlockId>(std::uniform_int_distribution<int>(k_min_colors, m_max_colors)(rng));
@@ -179,21 +157,23 @@ private:
     int m_max_colors = k_min_colors;
 };
 
-inline BlockId map_int_to_color(int n) {
-    using namespace BlockIdShorthand;
-    auto verify_is_color = [](BlockId bid) {
-        if (is_block_color(bid)) return bid;
-        throw std::runtime_error("map_int_to_color: returning block id that is not a color.");
-    };
-    switch (n) {
-    case 1: case 2: case 3: case 4: case 5:
-        return verify_is_color(static_cast<BlockId>(n));
-    default: throw std::invalid_argument("map_int_to_color: Only integers in [1 5] can be mapped to block ids.");
-    }
-}
+enum class PlayControlId : uint8_t {
+    left, right, down, up,
+    rotate_left, rotate_right,
+    pause,
+    count
+};
+
+static constexpr const int k_play_control_id_count = static_cast<int>(PlayControlId::count);
 
 using UString = ksg::Text::UString;
 
 UString to_ustring(const std::string &);
+
+template <typename CharType>
+const CharType * find_string_end(const CharType * sptr) {
+    while (*sptr) { ++sptr; }
+    return sptr;
+}
 
 GameSelection to_game_selection(std::size_t idx);

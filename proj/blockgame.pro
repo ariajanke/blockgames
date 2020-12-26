@@ -48,6 +48,7 @@ SOURCES += \
     ../src/PlayControl.cpp \
     ../src/WakefullnessUpdater.cpp \
     ../src/PuyoAiScript.cpp \
+    ../src/ControlConfigurationDialog.cpp \
     ../unit-tests/test-driver.cpp \
     \ ##############################################################
     #../../ext/discord-sdk/cpp/core.cpp \
@@ -84,6 +85,7 @@ HEADERS += \
     ../src/ColumnsClone.hpp \
     ../src/WakefullnessUpdater.hpp \
     ../src/PlayControl.hpp \
+    ../src/ControlConfigurationDialog.hpp \
     ../src/PuyoAiScript.hpp
 
 INCLUDEPATH += \

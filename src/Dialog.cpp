@@ -19,6 +19,7 @@
 
 #include "Dialog.hpp"
 
+#include "ControlConfigurationDialog.hpp"
 #include "AppState.hpp"
 #include "BoardStates.hpp"
 #include "PuyoState.hpp"
@@ -26,8 +27,15 @@
 #include "TetrisDialogs.hpp"
 #include "ColumnsClone.hpp"
 
+#include "PlayControl.hpp"
+
 #include <ksg/TextArea.hpp>
 #include <ksg/TextButton.hpp>
+#include <ksg/ImageWidget.hpp>
+
+#include <common/StringUtil.hpp>
+
+#include <iostream>
 
 #include <cassert>
 
@@ -35,49 +43,115 @@ namespace {
 
 using BoardOptions = BoardConfigDialog::BoardOptions;
 
-class FrameStretcher final : public ksg::Widget {
-    static constexpr const float k_min_width = 600.f;
-
-    void process_event(const sf::Event &) override {}
-
-    void set_location(float x, float y) override { m_location = VectorF(x, y); }
-
-    VectorF location() const override { return m_location; }
-
-    float width() const override { return k_min_width; }
-
-    float height() const override { return 0.f; }
-
-    void set_style(const ksg::StyleMap &) override {}
-
-    void draw(sf::RenderTarget &, sf::RenderStates) const override {}
-
-    VectorF m_location;
-};
-
-class GameSelectionDialog final : public Dialog {
+template <typename ... VarTypes>
+class VariantVisitorMaker {
 public:
-    GameSelectionDialog(GameSelection);
+    using VariantType = std::variant<VarTypes...>;
+
+    template <typename ... FuncTypes>
+    class Visitor;
+
 private:
-    void setup_() override;
-    void on_game_selection_update();
-#   if 0
-    ksg::TextArea m_sel_notice;
-#   endif
-    ksg::TextArea m_desc_notice;
+    template <typename ... FuncTypes>
+    class VisitorBase {
+    public:
+        template <typename ... FullFuncTypes>
+        using VisitFp = void (*)(const Visitor<FullFuncTypes...> &, const VariantType &);
 
-    ksg::TextButton m_freeplay;
-    ksg::TextButton m_scenario;
-    ksg::TextButton m_settings;
+    protected:
+        template <typename ... FullFuncTypes>
+        constexpr static void add_visit_fp(VisitFp<FullFuncTypes...> *,
+                                           VisitFp<FullFuncTypes...> *)
+        {}
+    };
 
-    ksg::OptionsSlider m_game_slider;
+    template <typename HeadFunc, typename ... FuncTypes>
+    class VisitorBase<HeadFunc, FuncTypes...> : public VisitorBase<FuncTypes...>, public HeadFunc {
+    public:
+        template <typename ... FullFuncTypes>
+        using VisitFp = typename VisitorBase<FuncTypes...>::template VisitFp<FullFuncTypes...>;
 
-    FrameStretcher m_stretcher;
+    protected:
+        constexpr VisitorBase(HeadFunc && head, FuncTypes && ... args):
+            VisitorBase<FuncTypes...>(std::forward<FuncTypes>(args)...),
+            HeadFunc(std::move(head))
+        {}
 
-    ksg::TextButton m_exit;
+        template <typename ... FullFuncTypes>
+        constexpr static void add_visit_fp(VisitFp<FullFuncTypes...> * fp,
+                                 VisitFp<FullFuncTypes...> * end_ptr)
+        {
+#           if 0
+            if (fp == end_ptr) {
+                throw std::runtime_error("Cannot construct function pointer table.");
+            }
+#           endif
+            *fp = visit<FullFuncTypes...>;
+            VisitorBase<FuncTypes...>::add_visit_fp(fp + 1, end_ptr);
+        }
 
-    GameSelection m_starting_sel;
+    private:
+        template <typename ... FullFuncTypes>
+        static void visit(const Visitor<FullFuncTypes...> & inst, const VariantType & var_) {
+            static constexpr const std::size_t k_idx = (sizeof...(VarTypes) - 1) - sizeof...(FuncTypes);
+            const auto & head = static_cast<const HeadFunc &>(inst);
+            head( std::get<k_idx>(var_) );
+        }
+    };
+
+public:
+    template <typename ... FuncTypes>
+    class Visitor final : public VisitorBase<FuncTypes...> {
+    public:
+        static_assert(sizeof...(VarTypes) == sizeof...(FuncTypes), "Number of functors must be equal to number of variant types.");
+        constexpr explicit Visitor(FuncTypes && ... args):
+            VisitorBase<FuncTypes...>(std::forward<FuncTypes>(args)...)
+        {
+            VisitorBase<FuncTypes...>::add_visit_fp
+                (m_fp_array.data(), m_fp_array.data() + m_fp_array.size());
+        }
+
+        void operator() (const VariantType & var) const {
+            if (var.valueless_by_exception()) return;
+            m_fp_array[var.index()](*this, var);
+        }
+
+    private:
+        using FullFp = void (*)(const Visitor &, const VariantType &);
+        std::array<FullFp, sizeof...(FuncTypes)> m_fp_array;
+    };
+
+    template <typename ... FuncTypes>
+    auto make_visitor(FuncTypes && ... args) const {
+        return Visitor<FuncTypes...>(std::forward<FuncTypes>(args)...);
+    }
 };
+
+template <typename ... VarTypes>
+auto from_variant(TypeTag<std::variant<VarTypes...>>) {
+    return VariantVisitorMaker<VarTypes...>();
+}
+
+int initme = []() {
+    using MyVar = std::variant<int, double, char>;
+    MyVar a, b, c;
+    a = MyVar(std::in_place_type_t<int>(), 1);
+    b = MyVar(std::in_place_type_t<double>(), 40.);
+    c = MyVar(std::in_place_type_t<char>(), 'A');
+
+    auto visitor = from_variant(TypeTag<MyVar>()).make_visitor(
+        [](int i) {
+        std::cout << "integer " << i << std::endl;
+    }, [](double d) {
+        std::cout << "double " << d << std::endl;
+    }, [](char c) {
+        std::cout << "character " << c << std::endl;
+    });
+    for (const auto * var : { &a, &b, &c }) {
+        visitor(*var);
+    }
+    return 1;
+} ();
 
 const char * game_name(GameSelection sel) {
     using Game = GameSelection;
@@ -145,6 +219,18 @@ void Dialog::set_styles_ptr(StyleMapPtr sptr)
 
 // ----------------------------------------------------------------------------
 
+void BoardConfigDialog::assign_size_pointers(int * width_pointer, int * height_pointer) {
+    assert(width_pointer != height_pointer);
+    assert(width_pointer && height_pointer);
+    m_height_ptr = height_pointer;
+    m_width_ptr = width_pointer;
+}
+
+void BoardConfigDialog::assign_number_of_colors_pointer(int * colors_pointer) {
+    assert(colors_pointer);
+    m_colors_ptr = colors_pointer;
+}
+
 void BoardConfigDialog::setup() {
     m_board_config_notice.set_string(U"Configure board width, height,\nand maximum number of colors.");
 
@@ -156,34 +242,45 @@ void BoardConfigDialog::setup() {
     m_height_sel.set_options(number_range_to_strings(k_min_board_size, k_max_board_size));
     m_number_of_colors_sel.set_options(number_range_to_strings(k_min_colors, k_max_colors));
 
-    m_width_sel.select_option(std::size_t(board_options().width - k_min_board_size));
-    m_width_sel.set_option_change_event([this]() {
-        board_options().width = k_min_board_size + int(m_width_sel.selected_option_index());
-    });
-    m_height_sel.select_option(std::size_t(board_options().height - k_min_board_size));
-    m_height_sel.set_option_change_event([this]() {
-        board_options().height = k_min_board_size + int(m_height_sel.selected_option_index());
-    });
-    m_number_of_colors_sel.select_option(std::size_t(board_options().colors - k_min_colors));
-    m_number_of_colors_sel.set_option_change_event([this]() {
-        board_options().colors = k_min_colors + int(m_number_of_colors_sel.selected_option_index());
-    });
+    if (!m_width_ptr && !m_height_ptr && !m_colors_ptr) {
+        throw std::runtime_error("No option pointers have been assigned, this would mean a blank frame.");
+    }
+    if (m_width_ptr) {
+        assert(m_height_ptr);
+        m_width_sel.select_option(std::size_t(*m_width_ptr - k_min_board_size));
+        m_width_sel.set_option_change_event([this]() {
+            *m_width_ptr = k_min_board_size + int(m_width_sel.selected_option_index());
+        });
+        m_height_sel.select_option(std::size_t(*m_height_ptr - k_min_board_size));
+        m_height_sel.set_option_change_event([this]() {
+            *m_height_ptr = k_min_board_size + int(m_height_sel.selected_option_index());
+        });
+    }
+    if (m_colors_ptr) {
+        m_number_of_colors_sel.select_option(std::size_t(*m_colors_ptr - k_min_colors));
+        m_number_of_colors_sel.set_option_change_event([this]() {
+            *m_colors_ptr = k_min_colors + int(m_number_of_colors_sel.selected_option_index());
+        });
+    }
 
     set_frame_border_size(0.f);
 
-    begin_adding_widgets().
-        add(m_board_config_notice).add_line_seperator().
-        add(m_width_label).add_horizontal_spacer().add(m_width_sel).add_line_seperator().
-        add(m_height_label).add_horizontal_spacer().add(m_height_sel).add_line_seperator().
-        add(m_num_of_colors_label).add_horizontal_spacer().add(m_number_of_colors_sel).add_line_seperator();
+    auto adder = begin_adding_widgets();
+    adder.add(m_board_config_notice).add_line_seperator();
+    if (m_width_ptr) {
+        adder.
+            add(m_width_label).add_horizontal_spacer().add(m_width_sel).add_line_seperator().
+            add(m_height_label).add_horizontal_spacer().add(m_height_sel).add_line_seperator();
+    }
+    if (m_colors_ptr) {
+        adder.add(m_num_of_colors_label).add_horizontal_spacer().add(m_number_of_colors_sel).add_line_seperator();
+    }
 }
 
-void BoardConfigDialog::assign_board_options(BoardOptions & opts)
-    { m_board_options = &opts; }
-
-/* private */ BoardOptions & BoardConfigDialog::board_options() {
-    assert(m_board_options);
-    return *m_board_options;
+void BoardConfigDialog::assign_pointers_from_board_options(BoardOptions & options) {
+    m_width_ptr  = &options.width ;
+    m_height_ptr = &options.height;
+    m_colors_ptr = &options.colors;
 }
 
 // ----------------------------------------------------------------------------
@@ -205,8 +302,10 @@ void BoardConfigDialog::assign_board_options(BoardOptions & opts)
         b = !b;
         update_button_string();
     });
-
+#   if 0
     m_board_config.assign_board_options(settings().samegame);
+#   endif
+    m_board_config.assign_pointers_from_board_options(settings().samegame);
     m_board_config.setup();
 
     m_back.set_press_event([this]() {
@@ -232,8 +331,6 @@ std::vector<UString> number_range_to_strings(int min, int max) {
     }
     return rv;
 }
-
-namespace {
 
 GameSelectionDialog::GameSelectionDialog(GameSelection sel):
     m_starting_sel(sel)
@@ -295,6 +392,13 @@ void GameSelectionDialog::setup_() {
         }
     });
 #   endif
+
+    m_configure_controls.set_press_event([this]() {
+        auto sel = to_game_selection(m_game_slider.selected_option_index());
+        set_next_state(make_dialog<ControlConfigurationDialog>(sel));
+    });
+    m_configure_controls.set_string(U"Configure Controls");
+
     m_exit.set_press_event([this]()
         { set_next_state(std::make_unique<QuitState>()); });
 
@@ -304,6 +408,7 @@ void GameSelectionDialog::setup_() {
         add_horizontal_spacer().add(m_freeplay).add_horizontal_spacer().
             add(m_scenario).add_horizontal_spacer().add(m_settings).add_horizontal_spacer().add_line_seperator().
         add(m_stretcher).add_line_seperator().
+        add(m_configure_controls).add_line_seperator().
         add_horizontal_spacer().add(m_exit).add_horizontal_spacer();
 
 }
@@ -319,5 +424,3 @@ void GameSelectionDialog::on_game_selection_update() {
         break;
     }
 }
-
-} // end of <anonymous> namespace

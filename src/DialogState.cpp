@@ -27,9 +27,8 @@ void DialogPtrPriv::Del::operator () (Dialog * ptr) const { delete ptr; }
 
 // ----------------------------------------------------------------------------
 
-void DialogState::set_dialog(DialogPtr dialog) {
-    m_dialog = std::move(dialog);
-}
+void DialogState::set_dialog(DialogPtr dialog)
+    { m_dialog = std::move(dialog); }
 
 /* private */ void DialogState::setup_(Settings & settings) {
     if (!m_dialog) {
@@ -37,6 +36,9 @@ void DialogState::set_dialog(DialogPtr dialog) {
     }
     m_dialog->setup(settings);
 }
+
+/* private */ void DialogState::update(double et)
+    { m_dialog->update(et); }
 
 /* private */ void DialogState::process_event(const sf::Event & event) {
     if (event.type == sf::Event::KeyReleased) {
@@ -46,7 +48,8 @@ void DialogState::set_dialog(DialogPtr dialog) {
         }
     }
     m_dialog->process_event(event);
-    set_next_state(m_dialog->get_next_app_state());
+    if (auto uptr = m_dialog->get_next_app_state())
+        set_next_state(std::move(uptr));
 }
 
 /* private */ double DialogState::width() const
@@ -55,6 +58,5 @@ void DialogState::set_dialog(DialogPtr dialog) {
 /* private */ double DialogState::height() const
     { return m_dialog->height(); }
 
-/* private */ void DialogState::draw(sf::RenderTarget & target, sf::RenderStates states) const {
-    target.draw(*m_dialog, states);
-}
+/* private */ void DialogState::draw(sf::RenderTarget & target, sf::RenderStates states) const
+    { target.draw(*m_dialog, states); }

@@ -357,8 +357,9 @@ PuyoStateN::PuyoStateN(int scenario_number) {
     m_current_scenario = Scenario::get_all_scenarios().at(scenario_number)->clone();
 }
 
-/* private */ void PuyoStateN::setup_board(const Settings &) {
-    auto params = m_current_scenario->setup(Settings::Puyo());
+/* private */ void PuyoStateN::setup_board(const Settings & settings) {
+
+    auto params = m_current_scenario->setup( settings.get_puyo_settings(m_current_scenario->name()) );
     m_board.set_settings(params.fall_speed, params.pop_requirement);
     m_board.assign_score_board(0, m_score_board);
     m_board.assign_pause_pointer(m_pause);

@@ -30,34 +30,6 @@ bool has_consistent_width(std::initializer_list<std::initializer_list<T>>);
 
 } // end of <anonymous> namespace
 
-BlockGrid make_grid
-    (std::initializer_list<std::initializer_list<BlockId>> list)
-{
-    return BlockGrid(list);
-#   if 0
-    assert(has_consistent_width(list));
-    int last_width = -1;
-    for (auto sublist : list) {
-        if (last_width == -1) {
-            last_width = sublist.size();
-        } else {
-            assert(last_width == int(sublist.size()));
-        }
-    }
-    Grid<int> rv;
-    rv.set_size(last_width, list.size());
-    VectorI r;
-    for (auto sublist : list) {
-        for (auto i : sublist) {
-            assert(r != rv.end_position());
-            rv(r) = static_cast<int>(i);
-            r = rv.next(r);
-        }
-    }
-    return rv;
-#   endif
-}
-
 bool is_grid_the_same
     (const BlockGrid & grid, std::initializer_list<std::initializer_list<BlockId>> list)
 {
@@ -74,6 +46,35 @@ bool is_grid_the_same
         }
     }
     return true;
+}
+
+bool is_block_color(BlockId bid) {
+    using namespace BlockIdShorthand;
+    switch (bid) {
+    case r_: case g_: case b_: case m_: case y_: return true;
+    default: return false;
+    }
+}
+
+BlockId decay_block(BlockId bid) {
+    switch (bid) {
+    case BlockId::glass     : return BlockId::empty;
+    case BlockId::hard_glass: return BlockId::glass;
+    default: return bid;
+    }
+}
+
+BlockId map_int_to_color(int n) {
+    using namespace BlockIdShorthand;
+    auto verify_is_color = [](BlockId bid) {
+        if (is_block_color(bid)) return bid;
+        throw std::runtime_error("map_int_to_color: returning block id that is not a color.");
+    };
+    switch (n) {
+    case 1: case 2: case 3: case 4: case 5:
+        return verify_is_color(static_cast<BlockId>(n));
+    default: throw std::invalid_argument("map_int_to_color: Only integers in [1 5] can be mapped to block ids.");
+    }
 }
 
 UString to_ustring(const std::string & str) {

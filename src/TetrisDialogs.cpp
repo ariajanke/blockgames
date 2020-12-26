@@ -80,7 +80,10 @@ void PolyominoButton::issue_auto_resize() {
 // ----------------------------------------------------------------------------
 
 PolyominoSetSelectPage::PolyominoSetSelectPage(BoardOptions & board_opts) {
+#   if 0
     m_board_config.assign_board_options(board_opts);
+#   endif
+    m_board_config.assign_pointers_from_board_options(board_opts);
 }
 
 PolyominoItr PolyominoSetSelectPage::set

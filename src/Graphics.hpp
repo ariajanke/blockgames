@@ -20,9 +20,7 @@
 #pragma once
 
 #include "Defs.hpp"
-#if 0
-#include <common/SubGrid.hpp>
-#endif
+
 namespace sf { class RenderTarget; }
 
 sf::Image to_image(const Grid<sf::Color> &);
@@ -53,6 +51,8 @@ sf::IntRect texture_rect_for_score();
 sf::IntRect texture_rect_for_next();
 
 sf::IntRect texture_rect_for_char(char);
+
+sf::IntRect texture_rect_for_control(PlayControlId, bool is_pressed);
 
 sf::Color base_color_for_block(BlockId);
 

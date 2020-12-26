@@ -37,8 +37,6 @@
 
 namespace {
 
-void print_grid(const Grid<int> &);
-
 bool test_GetEdgeValue(ts::TestSuite &);
 bool test_select_connected_blocks(ts::TestSuite &);
 bool test_make_blocks_fall(ts::TestSuite &);
@@ -62,43 +60,6 @@ int MACRO_TEST_DRIVER_ENTRY_FUNCTION() {
         all_good = f(suite) && all_good;
     }
     return all_good ? 0 : ~0;
-    // move to cul
-#   if 0
-    {
-    auto g = make_grid({
-       { 0, 1, 2 },
-       { 3, 4, 5 },
-       { 6, 7, 8 },
-    });
-    assert(g(0, 0) == 0);
-    assert(g(1, 0) == 1);
-    assert(g(2, 0) == 2);
-
-    assert(g(0, 1) == 3);
-    assert(g(1, 1) == 4);
-    assert(g(2, 1) == 5);
-
-    assert(g(0, 2) == 6);
-    assert(g(1, 2) == 7);
-    assert(g(2, 2) == 8);
-    }
-    {
-    auto g = make_grid({
-        { 0, 1 },
-        { 2, 3 },
-        { 4, 5 }
-    });
-
-    assert(g(0, 0) == 0);
-    assert(g(1, 0) == 1);
-
-    assert(g(0, 1) == 2);
-    assert(g(1, 1) == 3);
-
-    assert(g(0, 2) == 4);
-    assert(g(1, 2) == 5);
-    }
-#   endif
 }
 
 namespace {
@@ -155,7 +116,7 @@ bool test_select_connected_blocks(ts::TestSuite & suite) {
     suite.start_series("select_connected_blocks");
     suite.test([]() { // test 0
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
            { e_, r_, e_ },
            { r_, r_, r_ },
            { e_, r_, e_ }
@@ -170,7 +131,7 @@ bool test_select_connected_blocks(ts::TestSuite & suite) {
 
     suite.test([]() { // test 1
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
            { r_, e_, r_ },
            { r_, r_, r_ },
            { r_, e_, r_ }
@@ -183,7 +144,7 @@ bool test_select_connected_blocks(ts::TestSuite & suite) {
     });
     suite.test([]() { // test 2
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
            { e_, e_, g_, e_ },
            { e_, r_, r_, e_ },
            { e_, r_, r_, g_ },
@@ -202,7 +163,7 @@ bool test_make_blocks_fall(ts::TestSuite & suite) {
     suite.start_series("make_blocks_fall");
     suite.test([]() {
         using namespace BlockIdShorthand;
-        return ts::test(is_grid_the_same(make_grid({
+        return ts::test(is_grid_the_same(BlockGrid({
             { r_, e_, e_ },
             { r_, e_, e_ },
             { r_, r_, r_ },
@@ -214,7 +175,7 @@ bool test_make_blocks_fall(ts::TestSuite & suite) {
     });
     suite.test([]() { // test 0
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { e_ },
             { r_ },
             { e_ },
@@ -237,12 +198,12 @@ bool test_FallEffectsFull_do_fall_in(ts::TestSuite & suite) {
     static const sf::Texture test_texture;
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { e_, e_, e_ },
             { r_, e_, e_ },
             { r_, r_, r_ },
         });
-        auto fallins = make_grid({
+        BlockGrid fallins({
             { e_, e_, r_ },
             { e_, r_, e_ },
             { r_, e_, e_ },
@@ -258,12 +219,12 @@ bool test_FallEffectsFull_do_fall_in(ts::TestSuite & suite) {
     });
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { e_, e_, e_ },
             { r_, e_, e_ },
             { r_, e_, r_ },
         });
-        auto fallins = make_grid({
+        BlockGrid fallins({
             { e_, e_, r_ },
             { e_, r_, e_ },
             { e_, e_, e_ },
@@ -279,13 +240,13 @@ bool test_FallEffectsFull_do_fall_in(ts::TestSuite & suite) {
     });
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { e_, e_, e_ },
             { e_, e_, e_ },
             { e_, e_, e_ },
             { r_, e_, e_ },
         });
-        auto fallins = make_grid({
+        BlockGrid fallins({
             { e_, e_, r_ },
             { r_, r_, e_ },
             { r_, r_, r_ },
@@ -308,7 +269,7 @@ bool test_columns_algo(ts::TestSuite & suite) {
     suite.start_series("pop_columns_blocks");
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { r_ }, { r_ }, { r_ }
         });
         pop_columns_blocks(g, 3);
@@ -316,7 +277,7 @@ bool test_columns_algo(ts::TestSuite & suite) {
     });
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { r_, r_, r_ }
         });
         pop_columns_blocks(g, 3);
@@ -324,7 +285,7 @@ bool test_columns_algo(ts::TestSuite & suite) {
     });
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { r_, r_, g_ },
             { r_, b_, g_ },
             { g_, b_, b_ }
@@ -348,10 +309,10 @@ bool test_columns_algo(ts::TestSuite & suite) {
     suite.test([]() {
         using namespace BlockIdShorthand;
         return ts::test(compare_test_to_cor(
-            make_grid({
+            BlockGrid({
                 { e_, e_, e_, g_ },
                 { b_, r_, r_, r_ },
-            }), make_grid({
+            }), BlockGrid({
                 { e_, e_, e_, g_ },
                 { b_, e_, e_, e_ },
             })
@@ -360,9 +321,9 @@ bool test_columns_algo(ts::TestSuite & suite) {
     suite.test([]() {
         using namespace BlockIdShorthand;
         return ts::test(compare_test_to_cor(
-            make_grid({
+            BlockGrid({
                 { r_, r_, r_, g_ }
-            }), make_grid({
+            }), BlockGrid({
                 { e_, e_, e_, g_ }
             })
         ));
@@ -370,11 +331,11 @@ bool test_columns_algo(ts::TestSuite & suite) {
     suite.test([]() {
         using namespace BlockIdShorthand;
         return ts::test(compare_test_to_cor(
-            make_grid({
+            BlockGrid({
                 { r_, g_, g_ },
                 { g_, r_, g_ },
                 { g_, g_, r_ }
-            }), make_grid({
+            }), BlockGrid({
                 { e_, g_, g_ },
                 { g_, e_, g_ },
                 { g_, g_, e_ }
@@ -384,11 +345,11 @@ bool test_columns_algo(ts::TestSuite & suite) {
     suite.test([]() {
         using namespace BlockIdShorthand;
         return ts::test(compare_test_to_cor(
-            make_grid({
+            BlockGrid({
                 { r_, r_, r_ },
                 { g_, r_, g_ },
                 { g_, g_, r_ }
-            }), make_grid({
+            }), BlockGrid({
                 { e_, e_, e_ },
                 { g_, e_, g_ },
                 { g_, g_, e_ }
@@ -397,14 +358,14 @@ bool test_columns_algo(ts::TestSuite & suite) {
     });
     suite.test([]() {
         using namespace BlockIdShorthand;
-        auto g = make_grid({
+        BlockGrid g({
             { r_, r_, r_, g_, g_, b_, r_ },
             { g_, r_, b_, g_, b_, r_, g_ },
             { m_, r_, m_, m_, r_, m_, b_ },
             { r_, r_, m_, b_, g_, r_, b_ },
             { m_, b_, m_, b_, g_, b_, r_ }
         });
-        auto cor = make_grid({
+        BlockGrid cor({
             { e_, e_, e_, g_, g_, b_, e_ },
             { g_, e_, b_, g_, b_, e_, g_ },
             { m_, e_, e_, m_, e_, m_, b_ },
@@ -512,7 +473,7 @@ bool test_ai_script(ts::TestSuite & suite) {
                         && below_row_count == 6);
     });
     // test situations which need rotations
-    auto mk_board = [](const BlockGrid & grid) {
+    static auto mk_board = [](const BlockGrid & grid) {
         PuyoBoard board;
         board.set_size(grid.width(), grid.height());
         board.set_settings(1.5, 4);
@@ -523,9 +484,93 @@ bool test_ai_script(ts::TestSuite & suite) {
         return board;
     };
     suite.test([]() {
-        //PuyoBoard board = mk_board();
+        using namespace BlockIdShorthand;
+        BlockGrid test_grid {
+            { e_, e_, e_ },
+            { g_, e_, r_ },
+            { r_, g_, b_ }
+        };
+        PuyoBoard board = mk_board(test_grid);
 
-        return ts::test(false);
+        return ts::test(
+            std::equal(
+                board.blocks().begin(), board.blocks().end(),
+                test_grid.begin(), test_grid.end())
+            && !board.is_ready());
+    });
+    suite.test([]() {
+        using namespace BlockIdShorthand;
+        auto board = mk_board(BlockGrid {
+            { e_, e_, e_ },
+            { g_, e_, r_ },
+            { r_, g_, b_ }
+        });
+        board.push_falling_piece(m_, r_);
+        SimpleMatcher simp;
+        static_cast<AiScript &>(simp).play_board(board);
+        assert(!board.is_ready());
+
+        board.push_falling_piece(r_, r_);
+        assert(board.is_ready());
+
+        // at this point a placement decision is made
+        return ts::test(simp.adjacent_target() == VectorI(1, 1));
+    });
+    suite.test([]() {
+        using namespace BlockIdShorthand;
+        auto board = mk_board(BlockGrid {
+            { e_, e_, e_ },
+            { e_, e_, e_ },
+            { g_, e_, r_ },
+            { r_, g_, b_ }
+        });
+        board.push_falling_piece(m_, r_);
+        SimpleMatcher simp;
+        auto & as_script = static_cast<AiScript &>(simp);
+        as_script.play_board(board);
+        board.push_falling_piece(r_, r_);
+
+        // at this point a placement decision is made
+        // there is one event set per call
+        static constexpr const int k_turns_to_rotate = 2 + 3; // presses + releases
+        for (int i = 0; i != k_turns_to_rotate; ++i) {
+            // no time update is necessary to rotate the piece
+            as_script.play_board(board);
+            bool rot_press = simp.controller_state().is_pressed(PlayControlId::rotate_right);
+            std::cout << "Step " << (i + 1) << " rotate right is " << (rot_press ? ">PRESSED<" : "*released*") << std::endl;
+        }
+
+        const auto & piece = board.current_piece();
+        return ts::test(    piece.other_location() - piece.location() == VectorI(0, 1)
+                        && !simp.controller_state().is_pressed(PlayControlId::rotate_right));
+    });
+    suite.test([]() {
+        using namespace BlockIdShorthand;
+        auto board = mk_board(BlockGrid {
+            { e_, e_, e_ },
+            { e_, e_, e_ },
+            { m_, e_, r_ },
+            { r_, g_, b_ }
+        });
+        board.push_falling_piece(m_, r_);
+        SimpleMatcher simp;
+        auto & as_script = static_cast<AiScript &>(simp);
+        as_script.play_board(board);
+        board.push_falling_piece(r_, r_);
+
+        // at this point a placement decision is made
+        // there is one event set per call
+        static constexpr const int k_turns_to_rotate = 3 + 4; // presses + releases
+        for (int i = 0; i != k_turns_to_rotate; ++i) {
+            // no time update is necessary to rotate the piece
+            as_script.play_board(board);
+            bool rot_press = simp.controller_state().is_pressed(PlayControlId::rotate_left);
+            std::cout << "Step " << (i + 1) << " rotate left is " << (rot_press ? ">PRESSED<" : "*released*") << std::endl;
+        }
+
+        const auto & piece = board.current_piece();
+        return ts::test(    piece.other_location() - piece.location() == VectorI(1, 0)
+                        && !simp.controller_state().is_pressed(PlayControlId::rotate_left));
     });
     return suite.has_successes_only();
 }

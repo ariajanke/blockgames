@@ -189,6 +189,13 @@ sf::IntRect texture_rect_for_char(char c) {
     return sf::IntRect(x, k_score_start_y, k_char_size, k_block_size);
 }
 
+sf::IntRect texture_rect_for_control(PlayControlId id, bool is_pressed) {
+    // id as int corresponds one-one to the graphics
+    return sf::IntRect(static_cast<int>(id)*k_block_size,
+                       k_score_start_y + k_block_size*(is_pressed ? 2 : 1),
+                       k_block_size, k_block_size);
+}
+
 sf::Color base_color_for_block(BlockId n) {
     return is_block_color(n) ? get_group_color_value(n) : sf::Color::White;
 }
@@ -246,6 +253,9 @@ void add_builtin_background(SubGrid<sf::Color>);
 
 void add_builtin_score_numbers(SubGrid<sf::Color>);
 
+// stored sequentially
+void add_builtin_controls(SubGrid<sf::Color>);
+
 TileEdges get_edges_for(const ConstBlockSubGrid &, VectorI);
 
 const ColorGrid & builtin_blocks() {
@@ -255,7 +265,7 @@ const ColorGrid & builtin_blocks() {
     rv = std::make_unique<ColorGrid>();
     Grid<sf::Color> & grid = *rv;
     grid.set_size( k_color_group_size*3     *k_block_size,
-                  (k_color_group_size*2 + 4)*k_block_size, sf::Color(0, 0, 0, 0));
+                  (k_color_group_size*2 + 6)*k_block_size, sf::Color(0, 0, 0, 0));
     for (auto color : { BlockId::blue, BlockId::green, BlockId::magenta,
                         BlockId::red, BlockId::yellow })
     {
@@ -287,6 +297,8 @@ const ColorGrid & builtin_blocks() {
         k_block_size*4, k_block_size));
     add_builtin_score_numbers(make_sub_grid(grid,
         VectorI(0, k_score_start_y), SubGrid<int>::k_rest_of_grid, 2*k_block_size));
+    add_builtin_controls(make_sub_grid(grid,
+        VectorI(0, k_score_start_y + k_block_size), k_block_size*7, k_block_size*2));
     return *rv;
 }
 
@@ -329,8 +341,8 @@ ColorGroupInfo get_color_group_info(BlockId color) {
     case r_: return make_tuple(Color(230,  70,  70), mk_v(0, 0));
     case g_: return make_tuple(Color( 70, 230,  70), mk_v(1, 0));
     case b_: return make_tuple(Color(100, 100, 250), mk_v(2, 0));
-    case m_: return make_tuple(Color(230, 230,  70), mk_v(0, 1));
-    case y_: return make_tuple(Color(230,  70, 230), mk_v(1, 1));
+    case y_: return make_tuple(Color(230, 230,  70), mk_v(0, 1));
+    case m_: return make_tuple(Color(230,  70, 230), mk_v(1, 1));
     default: break;
     }
     throw std::invalid_argument("color_block_nfo: invalid color");
@@ -662,11 +674,13 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
         make_pair(k_numbers_8_9_width       , k_numbers_8_9       ),
         make_pair(k_next_card_width         , k_next_card         )
     };
+#   if 0
     static const int k_total_width = []() {
         int rv = 0;
         for (auto & p : k_graphic_list) rv += std::get<0>(p);
         return rv;
     } ();
+#   endif
     static auto char_to_color = [](char c) {
         switch (c) {
         case ' ': return sf::Color(0, 0, 0, 0);
@@ -720,6 +734,199 @@ void add_builtin_score_numbers(SubGrid<sf::Color> subgrid) {
     }
 }
 
+void add_builtin_controls(SubGrid<sf::Color> subgrid) {
+    assert(subgrid.width () >= k_block_size*7);
+    assert(subgrid.height() >= k_block_size*2);
+    // whole spite      = 16px by 16px
+    // button frame     = 16px by 12px
+    // button contents  = 12px by  8px
+    // stand background = 16px by  6px
+    // press overlay    = 16px by 16px
+
+    static constexpr const auto k_key_frame_height = 12;
+    static constexpr const auto k_key_frame =
+        // 0123456789ABCDEF
+        """                "// 0
+        """  XXXXXXXXXXXX  "// 1
+        """ Xx..........`X "// 2
+        """ X.```````````X "// 3
+        """ X.```````````X "// 4
+        """ X.```````````X "// 5
+        """ X.```````````X "// 6
+        """ X.```````````X "// 7
+        """ X.```````````X "// 8
+        """ X````````````X "// 9
+        """  XXXXXXXXXXXX  "// A
+        """                "// B
+        ;
+    assert(strlen(k_key_frame) / k_block_size == k_key_frame_height);
+    assert(strlen(k_key_frame) % k_block_size == 0);
+
+    static constexpr const auto k_key_stand_height = 6;
+    static constexpr const auto k_key_stand =
+        // 0123456789ABCDEF
+        """  xX........Xx  "// 0
+        """  xX........Xx  "// 1
+        """  xX...`....Xx  "// 2
+        """  xX..```...Xx  "// 3
+        """  xX..````..Xx  "// 4
+        """  xX..````..Xx  "// 5
+        ;
+    assert(strlen(k_key_stand) / k_block_size == k_key_stand_height);
+    assert(strlen(k_key_stand) % k_block_size == 0);
+    static constexpr const auto k_key_depress_overlay_height = 3;
+    static constexpr const auto k_key_depress_overlay =
+        // 0123456789ABCDEF
+        """   x       x    "// 0
+        """ x x       x x  "// 1
+        """ x           x  "// 2
+        ;
+    assert(strlen(k_key_depress_overlay) / k_block_size == k_key_depress_overlay_height);
+    assert(strlen(k_key_depress_overlay) % k_block_size == 0);
+
+    static constexpr const auto k_press_y_offset = 4;
+    static_assert(k_key_stand_height - k_press_y_offset > 0, "key depression offset must not exceed height of stand.");
+
+    static constexpr const auto k_key_content_width  = 12;
+    static constexpr const auto k_key_content_height =  8;
+    static constexpr const auto k_key_down =
+        // 0123456789AB
+        """    XXXX    "// 0
+        """    X..X    "// 1
+        """    X..X    "// 2
+        """ XXXX..XXXX "// 3
+        """ X........X "// 4
+        """ XXxx..xxXX "// 5
+        """   XXxxXX   "// 6
+        """     XX     "// 7
+        ;
+    static constexpr const auto k_key_left =
+        // 0123456789AB
+        """    XXX     "// 0
+        """   Xx.X     "// 1
+        """  Xx..X     "// 2
+        """ Xx...XXXXX "// 3
+        """ Xx...xxXXX "// 4
+        """  Xx..X..   "// 5
+        """   Xx.X     "// 6
+        """    XXX     "// 7
+        ;
+    static constexpr const auto k_key_rotate_left =
+        // 0123456789AB
+        """   X        "// 0
+        """  Xx        "// 1
+        """ Xx.XXXx    "// 2
+        """ Xx.....x   "// 3
+        """ Xx.XXx..x  "// 4
+        """  Xx  X..X  "// 5
+        """   X  X..X  "// 6
+        """      xXXx  "// 7
+        ;
+    static constexpr const auto k_key_pause =
+        // 0123456789AB
+        """            "// 0
+        """  XXx  XXx  "// 1
+        """  XXx  XXx  "// 2
+        """  XXx  XXx  "// 3
+        """  XXx  XXx  "// 4
+        """  XXx  XXx  "// 5
+        """  xx.  xx.  "// 6
+        """            "// 7
+        ;
+    using TransFunc = VectorI(*)(VectorI);
+    static const auto verify_with_button_content = [](VectorI r) {
+        assert(r.x >= 0 && r.x < k_key_content_width );
+        assert(r.y >= 0 && r.y < k_key_content_height);
+        return r;
+    };
+    static const TransFunc identitiy_f = [](VectorI r) { return r; };
+    static const TransFunc flip_v = [](VectorI r)
+        { return VectorI(r.x, k_key_content_height - r.y - 1); };
+    static const TransFunc flip_h = [](VectorI r)
+        { return VectorI(k_key_content_width - r.x - 1, r.y); };
+    static const auto to_key_content_index = [](VectorI r) {
+        r = verify_with_button_content(r);
+        return std::size_t(r.x + r.y*k_key_content_width);
+    };
+    static const auto palette_translate = [](char c) {
+        switch (c) {
+        case ' ': return sf::Color(0, 0, 0, 0);
+        case '.': return sf::Color(160, 160, 160);
+        case 'X': return sf::Color(100, 100, 100);
+        case 'x': return sf::Color(140, 140, 140);
+        case '`': return sf::Color(230, 230, 230);
+        default : throw std::runtime_error("Cannot translate character " + std::string(1, c) + " into color.");
+        }
+    };
+    using std::make_pair;
+    static const auto k_button_content_list = {
+        make_pair(k_key_left       , identitiy_f),
+        make_pair(k_key_left       , flip_h     ),
+        make_pair(k_key_down       , flip_v     ),
+        make_pair(k_key_down       , identitiy_f),
+        make_pair(k_key_rotate_left, identitiy_f),
+        make_pair(k_key_rotate_left, flip_h     ),
+        make_pair(k_key_pause      , identitiy_f)
+    };
+
+    for (auto & c : subgrid) {
+        c = sf::Color(0, 0, 0, 0);
+    }
+    int x_offset = 0;
+    for (auto [key_content, transfn] : k_button_content_list) {
+        auto release_subg = make_sub_grid(subgrid, VectorI(x_offset,            0), k_block_size, k_block_size);
+        auto pressed_subg = make_sub_grid(subgrid, VectorI(x_offset, k_block_size), k_block_size, k_block_size);
+        // on press, frame with y translation + press overlay + stand with y translation
+        // on release, frame + stand
+        auto get_color = [](const char * src, VectorI r)
+            { return palette_translate(src[to_16x16_index(r)]); };
+        auto set_color = [](SubGrid<sf::Color> & grid, VectorI r, sf::Color c) {
+            if (c.a == 0) return;
+            grid(r) = c;
+        };
+        using namespace std::placeholders;
+        auto set_rel = std::bind(set_color, std::ref(release_subg), _1, _2);
+        auto set_pre = std::bind(set_color, std::ref(pressed_subg), _1, _2);
+
+        for (VectorI r; r != release_subg.end_position(); r = release_subg.next(r)) {
+            if (r.y < k_key_depress_overlay_height) {
+                set_pre(r, get_color(k_key_depress_overlay, r));
+            }
+            if (r.y >= k_block_size - k_key_stand_height) {
+                // release draws entire stand
+                auto relr = r - VectorI(0, k_block_size - k_key_stand_height);
+                assert(relr.y < k_key_stand_height);
+                set_rel(r, get_color(k_key_stand, relr));
+            }
+
+            if (r.y >= k_block_size - (k_key_stand_height - k_press_y_offset)) {
+                auto prer = r - VectorI(0, k_block_size - (k_key_stand_height - k_press_y_offset));
+                assert(prer.y < k_key_stand_height);
+                set_pre(r, get_color(k_key_stand, prer));
+            }
+            if (r.y < k_key_frame_height) {
+                auto clr = get_color(k_key_frame, r);
+                set_pre(r + VectorI(0, k_press_y_offset), clr);
+                set_rel(r, clr);
+            }
+        }
+        for (auto content_grid : {
+             make_sub_grid(release_subg, VectorI(2, 2),
+                           k_key_content_width, k_key_content_height),
+             make_sub_grid(pressed_subg, VectorI(2, 2 + k_press_y_offset),
+                           k_key_content_width, k_key_content_height) })
+        {
+            for (VectorI r; r != content_grid.end_position(); r = content_grid.next(r)) {
+                auto chr = key_content[to_key_content_index( transfn(r) )];
+                auto clr = palette_translate(chr);
+                if (clr.a == 0) continue;
+                content_grid(r) = clr;
+            }
+        }
+        x_offset += k_block_size;
+    }
+}
+
 TileEdges get_edges_for(const ConstBlockSubGrid & blocks, VectorI r) {
     if (!is_block_color(blocks(r))) { return TileEdges().set(); }
     using std::make_pair;
@@ -750,7 +957,7 @@ const char * get_edge_mask(const TileEdges & edges) {
 
 const char * get_color_mask_impl(BlockId n) {
     switch (n) {
-    case BlockId::red: return
+    case BlockId::yellow: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -788,7 +995,7 @@ const char * get_color_mask_impl(BlockId n) {
         """                "// E
         """                "// F
         ;
-    case BlockId::blue: return
+    case BlockId::red: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1
@@ -807,7 +1014,7 @@ const char * get_color_mask_impl(BlockId n) {
         """                "// E
         """                "// F
         ;
-    case BlockId::yellow: return
+    case BlockId::blue: return
         // 0123456789ABCDEF
         """                "// 0
         """                "// 1

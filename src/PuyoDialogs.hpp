@@ -31,16 +31,21 @@
 
 class PuyoSettingsDialog final : public Dialog {
 public:
+#   if 0
     explicit PuyoSettingsDialog(int scenario_index):
         m_scenario_index(scenario_index)
     {}
+#   endif
+    explicit PuyoSettingsDialog(const char * name_ptr):
+        m_name_ptr(name_ptr)
+    {}
 
 private:
-    using PuyoSettings = Settings::Puyo;
+    using PuyoSettings = Settings::WritablePuyo;
 
     void setup_() override;
 
-    PuyoSettings & puyo_settings();
+    PuyoSettings puyo_settings();
 
     ksg::TextArea m_pop_req_notice;
     ksg::TextArea m_fall_speed_notice;
@@ -52,6 +57,7 @@ private:
 
     BoardConfigDialog m_board_config;
     int m_scenario_index;
+    const char * m_name_ptr = nullptr;
 };
 
 class PuyoScenarioDialog final : public Dialog {

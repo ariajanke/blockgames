@@ -38,6 +38,8 @@ public:
 
     void set_styles_ptr(StyleMapPtr);
 
+    virtual void update(double) {}
+
     static DialogPtr make_top_level_dialog(GameSelection);
 
 protected:
@@ -63,11 +65,16 @@ class BoardConfigDialog final : public ksg::Frame {
 public:
     using BoardOptions = Settings::Board;
 
+    void assign_size_pointers(int * width_pointer, int * height_pointer);
+    void assign_number_of_colors_pointer(int * colors_pointer);
+
     void setup();
-    void assign_board_options(BoardOptions &);
+    void assign_pointers_from_board_options(BoardOptions &);
+
+    bool will_be_blank() const noexcept
+        { return !m_width_ptr && !m_height_ptr && !m_colors_ptr; }
 
 private:
-    BoardOptions & board_options();
     ksg::TextArea m_board_config_notice;
 
     ksg::TextArea m_width_label;
@@ -78,7 +85,9 @@ private:
     ksg::OptionsSlider m_height_sel;
     ksg::OptionsSlider m_number_of_colors_sel;
 
-    BoardOptions * m_board_options = nullptr;
+    int * m_width_ptr = nullptr;
+    int * m_height_ptr = nullptr;
+    int * m_colors_ptr = nullptr;
 };
 
 class SameGameDialog final : public Dialog {
@@ -92,6 +101,52 @@ class SameGameDialog final : public Dialog {
     ksg::TextButton m_back;
 
     BoardConfigDialog m_board_config;
+};
+
+class FrameStretcher final : public ksg::Widget {
+    static constexpr const float k_min_width = 600.f;
+
+    void process_event(const sf::Event &) override {}
+
+    void set_location(float x, float y) override { m_location = VectorF(x, y); }
+
+    VectorF location() const override { return m_location; }
+
+    float width() const override { return k_min_width; }
+
+    float height() const override { return 0.f; }
+
+    void set_style(const ksg::StyleMap &) override {}
+
+    void draw(sf::RenderTarget &, sf::RenderStates) const override {}
+
+    VectorF m_location;
+};
+
+class GameSelectionDialog final : public Dialog {
+public:
+    GameSelectionDialog(GameSelection);
+private:
+    void setup_() override;
+    void on_game_selection_update();
+#   if 0
+    ksg::TextArea m_sel_notice;
+#   endif
+    ksg::TextArea m_desc_notice;
+
+    ksg::TextButton m_freeplay;
+    ksg::TextButton m_scenario;
+    ksg::TextButton m_settings;
+
+    ksg::TextButton m_configure_controls;
+
+    ksg::OptionsSlider m_game_slider;
+
+    FrameStretcher m_stretcher;
+
+    ksg::TextButton m_exit;
+
+    GameSelection m_starting_sel;
 };
 
 std::vector<UString> number_range_to_strings(int min, int max);

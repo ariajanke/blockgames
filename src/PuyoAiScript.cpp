@@ -23,6 +23,8 @@
 
 #include <common/TestSuite.hpp>
 
+#include <iostream>
+
 void ControllerState::update
     (IdList new_presses, IdList new_releases, BoardBase & board)
 {
@@ -129,7 +131,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
     static constexpr const auto k_down = static_cast<std::size_t>(PlayControlId::down);
     int count = std::count(states.begin(), states.end(), false);
     states[k_down] = (count >= int(ControllerState::k_id_count - 1));
-#       if 1
+#   if 1
     int mul = 1;
     m_states_int = 0;
     using Pid = PlayControlId;
@@ -138,7 +140,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
             m_states_int += mul;
         mul *= 10;
     }
-#       endif
+#   endif
 }
 
 /* static */ Grid<bool> SimpleMatcher::compute_reachable_blocks
@@ -255,7 +257,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
             && piece.location() - piece.other_location() != VectorI(-1, 0))
     ) {
         // tap rotate (either is fine for this primitive bot
-        rotate_state = !m_controller_state.is_pressed(k_rotate);
+        rotate_state = !rotate_state;
     } else {
         rotate_state = false;
     }
@@ -290,7 +292,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
     if (piece.location() - piece.other_location() == VectorI(0, -1)) {
         rotate_state = false;
     } else {
-        rotate_state = !m_controller_state.is_pressed(k_rotate);
+        rotate_state = !rotate_state;
     }
 }
 
@@ -327,6 +329,19 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
         m_pivot_target    = pivot_match    == acc_end ? k_no_location : *pivot_match   ;
         m_adjacent_target = adjacent_match == acc_end ? k_no_location : *adjacent_match;
     }
+#   if 0
+    auto print_vec = [](VectorI r) -> std::ostream & {
+        if (r == k_no_location) {
+            std::cout << "no location";
+        } else {
+            std::cout << r.x << ", " << r.y;
+        }
+        return std::cout;
+    };
+    std::cout << "Targeting: pivot (";
+    print_vec(m_pivot_target) << ") adjacent (";
+    print_vec(m_adjacent_target) << ")" << std::endl;
+#   endif
 }
 
 // sorts closest location first (x-ways)

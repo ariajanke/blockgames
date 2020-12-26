@@ -37,13 +37,41 @@
     static constexpr const int k_min_pop_req = 2;
     static constexpr const int k_max_pop_req = 12;
 
-    m_pop_req_slider.set_options(number_range_to_strings(k_min_pop_req, k_max_pop_req));
+#   if 0
     m_pop_req_slider.select_option(puyo_settings().pop_requirement - k_min_pop_req);
 
     m_pop_req_slider.set_option_change_event([this]() {
         puyo_settings().pop_requirement = int(m_pop_req_slider.selected_option_index()) + k_min_pop_req;
     });
+#   endif
+    if (auto * pop_req = puyo_settings().pop_requirement_ptr()) {
+        m_pop_req_slider.set_options(number_range_to_strings(k_min_pop_req, k_max_pop_req));
+        m_pop_req_slider.select_option(*pop_req - k_min_pop_req);
 
+        m_pop_req_slider.set_option_change_event([this, pop_req]() {
+            *pop_req = int(m_pop_req_slider.selected_option_index()) + k_min_pop_req;
+        });
+    }
+    if (auto * fall_speed = puyo_settings().fall_speed_ptr()) {
+        m_fall_speed_text.set_width(200.f);
+        auto num = to_ustring(std::to_string(*fall_speed));
+        m_fall_speed_text.set_string(to_ustring(std::to_string(*fall_speed)));
+
+        m_fall_speed_text.set_character_filter([fall_speed](const UString & ustr) {
+            double out = 0.;
+            if (!string_to_number(ustr, out)) return false;
+            if (out > 0. && out < 10.) {
+                *fall_speed = out;
+                std::cout << "set fall speed " << out << " bps" << std::endl;
+                return true;
+            }
+            return false;
+        });
+        m_fall_speed_text.set_text_change_event([this, fall_speed]() {
+            string_to_number(m_fall_speed_text.string(), *fall_speed);
+        });
+    }
+#   if 0
     m_fall_speed_text.set_width(200.f);
     auto num = to_ustring(std::to_string(puyo_settings().fall_speed));
     m_fall_speed_text.set_string(to_ustring(std::to_string(puyo_settings().fall_speed)));
@@ -61,28 +89,43 @@
     m_fall_speed_text.set_text_change_event([this]() {
         string_to_number(m_fall_speed_text.string(), puyo_settings().fall_speed);
     });
-
+#   endif
     m_back.set_press_event([this]() {
         set_next_state(Dialog::make_top_level_dialog(GameSelection::puyo_clone));
     });
     m_back.set_string(U"Back to menu");
 
+#   if 0
     m_board_config.assign_board_options(puyo_settings());
-    m_board_config.setup();
+#   endif
+    if (puyo_settings().height_ptr()) {
+        m_board_config.assign_size_pointers(puyo_settings().width_ptr(), puyo_settings().height_ptr());
+    }
+    m_board_config.assign_number_of_colors_pointer(puyo_settings().color_count_ptr());
 
-    begin_adding_widgets(get_styles()).
-        add(m_pop_req_notice).add_horizontal_spacer().add(m_pop_req_slider).add_line_seperator().
-        add(m_fall_speed_notice).add_horizontal_spacer().add(m_fall_speed_text).add_line_seperator().
-        add(m_board_config).add_line_seperator().
-        add(m_back);
+    auto adder = begin_adding_widgets(get_styles());
+    if (puyo_settings().pop_requirement_ptr()) {
+        adder.add(m_pop_req_notice).add_horizontal_spacer().add(m_pop_req_slider).add_line_seperator();
+    }
+    if (puyo_settings().fall_speed_ptr()) {
+        adder.add(m_fall_speed_notice).add_horizontal_spacer().add(m_fall_speed_text).add_line_seperator();
+    }
+    if (!m_board_config.will_be_blank()) {
+        m_board_config.setup();
+        adder.add(m_board_config).add_line_seperator();
+    }
+    adder.add(m_back);
     m_board_config.set_padding(0.f);
 }
 
-/* private */ PuyoSettingsDialog::PuyoSettings & PuyoSettingsDialog::puyo_settings() {
+/* private */ PuyoSettingsDialog::PuyoSettings PuyoSettingsDialog::puyo_settings() {
+#   if 0
     if (m_scenario_index < 0 || m_scenario_index > settings().puyo_scenario_count()) {
         throw std::runtime_error("PuyoSettingsDialog::puyo_settings: cannot access scenario's settings (invalid index)");
     }
     return settings().get_puyo_scenario(m_scenario_index);
+#   endif
+    return settings().get_puyo_settings(m_name_ptr);
 }
 
 // ----------------------------------------------------------------------------
@@ -150,7 +193,7 @@ const ConstScenarioCont s_scenarios =
         if (get_selected_scenario().is_sequential()) {
             throw std::runtime_error("Cannot set settings for a sequential scenario. Settings are only for free play.");
         }
-        set_next_state(make_dialog<PuyoSettingsDialog>(int(m_scenario_slider.selected_option_index())));
+        set_next_state(make_dialog<PuyoSettingsDialog>(Scenario::get_all_scenarios()[m_scenario_slider.selected_option_index()]->name()));
     });
 
     {

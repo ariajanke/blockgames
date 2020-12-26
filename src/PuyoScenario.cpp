@@ -21,6 +21,10 @@
 
 #include <SFML/Window/VideoMode.hpp>
 
+#include <set>
+
+#include <cassert>
+
 namespace {
 
 using Rng          = std::default_random_engine;
@@ -52,14 +56,14 @@ class NonSequentialScenario : public Scenario {
 };
 
 class ForeverPop final : public NonSequentialScenario {
-    PuyoSettings setup(PuyoSettings params) override {
+    PuyoSettings setup_(PuyoSettings params) override {
         // need to disable score board somehow
         auto screen_width  = sf::VideoMode::getDesktopMode().width;
         auto screen_height = sf::VideoMode::getDesktopMode().height;
         params.width  = (screen_width  / (k_block_size*3)) - 3;
         params.height = (screen_height / (k_block_size*3));
         m_rng = Rng { std::random_device()() };
-        //m_max_colors = params.colors;
+        m_max_colors = params.colors;
         return params;
     }
 
@@ -72,12 +76,24 @@ class ForeverPop final : public NonSequentialScenario {
     }
     ScenarioPtr clone() const override { return make_scenario<ForeverPop>(); }
 
+    const PuyoSettings & default_settings() const override {
+        static const PuyoSettings inst = []() {
+            PuyoSettings rv;
+            rv.colors = 5;
+            rv.pop_requirement = 4;
+            rv.width = Settings::k_unused_i;
+            rv.height = Settings::k_unused_i;
+            return rv;
+        } ();
+        return inst;
+    }
+
     int m_max_colors = 5;
     Rng m_rng;
 };
 
 class PracticeMode final : public NonSequentialScenario {
-    PuyoSettings setup(PuyoSettings params) override
+    PuyoSettings setup_(PuyoSettings params) override
         { return params; }
 
     Response on_turn_change() override
@@ -91,11 +107,23 @@ class PracticeMode final : public NonSequentialScenario {
     }
 
     ScenarioPtr clone() const override { return make_scenario<PracticeMode>(); }
+public:
+    const PuyoSettings & default_settings() const override {
+        static const PuyoSettings inst = []() {
+            PuyoSettings rv;
+            rv.colors = 5;
+            rv.pop_requirement = 4;
+            rv.width  = 6;
+            rv.height = 12;
+            return rv;
+        } ();
+        return inst;
+    }
 };
 
 class GlassWaves final : public NonSequentialScenario {
 public:
-    PuyoSettings setup(PuyoSettings params) override;
+    PuyoSettings setup_(PuyoSettings params) override;
     Response on_turn_change() override;
 
     const char * name() const override { return "Glass Waves"; }
@@ -103,6 +131,18 @@ public:
         return "An unending scenario. Try not to get buried in glass blocks!";
     }
     ScenarioPtr clone() const override { return make_scenario<GlassWaves>(); }
+
+    const PuyoSettings & default_settings() const override {
+        static const PuyoSettings inst = []() {
+            PuyoSettings rv;
+            rv.colors = 3;
+            rv.pop_requirement = 5;
+            rv.width  = 6;
+            rv.height = 12;
+            return rv;
+        } ();
+        return inst;
+    }
 
 private:
     int m_turn_num = 0;
@@ -144,6 +184,22 @@ void Scenario::assign_board(Grid<int> & grid)
 
 /* static */ ScenarioPtr Scenario::make_glass_waves()
     { return make_scenario<GlassWaves>(); }
+
+int get_width(const PuyoSettings & s) { return s.width; }
+int get_height(const PuyoSettings & s) { return s.height; }
+int get_colors(const PuyoSettings & s) { return s.colors; }
+int get_pop_req(const PuyoSettings & s) { return s.pop_requirement; }
+
+/* private */ void Scenario::verify_unuseds_match(const PuyoSettings & settings) const {
+    const auto & defaults = default_settings();
+    static constexpr const auto k_unused = Settings::k_unused_i;
+    for (auto getter : { get_width, get_height, get_colors, get_pop_req }) {
+        auto def_val = getter(defaults);
+        if (def_val == k_unused) {
+            assert(getter(settings) == k_unused);
+        }
+    }
+}
 
 /* static */ std::vector<ScenarioPtr> Scenario::make_all_scenarios() {
     std::vector<ScenarioPtr> rv;
@@ -216,7 +272,7 @@ namespace {
 
 // ------------------------------ class divider -------------------------------
 
-/* private */ PuyoSettings GlassWaves::setup(PuyoSettings params) {
+/* private */ PuyoSettings GlassWaves::setup_(PuyoSettings params) {
 #   if 0
     params.max_colors = 3;
 #   endif
@@ -249,8 +305,12 @@ namespace {
 }
 
 std::vector<ScenarioPtr> verify_guarantees(std::vector<ScenarioPtr> && rv) {
+    std::set<const char *> name_ptr_set;
     bool reached_end_of_ns = false;
     for (auto & uptr : rv) {
+        if (!name_ptr_set.insert(uptr->name()).second) {
+            throw std::invalid_argument("verify_guarantees: name pointers must be unique");
+        }
         if (uptr->is_sequential()) {
             reached_end_of_ns = true;
         } else {

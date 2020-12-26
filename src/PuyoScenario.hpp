@@ -30,17 +30,21 @@ public:
     using ContinueFall = PuyoStateN::ContinueFall;
     using PuyoSettings = Settings::Puyo;
 
-    virtual PuyoSettings setup(PuyoSettings) = 0;
+    PuyoSettings setup(PuyoSettings settings) {
+        verify_unuseds_match(settings);
+        return setup_(settings);
+    }
+
     virtual Response on_turn_change() = 0;
+
     virtual const char * name() const = 0;
     virtual const char * description() const = 0;
     virtual bool is_sequential() const = 0;
     virtual ScenarioPtr clone() const = 0;
+    virtual const PuyoSettings & default_settings() const = 0;
 
     double fall_speed() const;
-#   if 0
-    void assign_board(Grid<int> &);
-#   endif
+
     void assign_board(BlockSubGrid);
 
     template<typename T>
@@ -52,27 +56,28 @@ public:
 
     static ScenarioPtr make_pop_forever();
     static ScenarioPtr make_glass_waves();
-private:
-    /** layout guaranteed to be:
-     *  is_sequential calls begin with false value then true
-     *  afterward each sequential stage is in order
-     */
-    static std::vector<ScenarioPtr> make_all_scenarios();
-public:
+
     static const std::vector<ConstScenarioPtr> & get_all_scenarios();
 
     static const int k_freeplay_scenario_count;
 
 protected:
+    virtual PuyoSettings setup_(PuyoSettings) = 0;
+
     BlockSubGrid & board();
 
     void set_fall_speed(double);
 
 private:
+    void verify_unuseds_match(const PuyoSettings &) const;
+
+    /** layout guaranteed to be:
+     *  is_sequential calls begin with false value then true
+     *  afterward each sequential stage is in order
+     */
+    static std::vector<ScenarioPtr> make_all_scenarios();
+
     double m_fall_speed = 1.;
     BlockSubGrid m_board_ref;
-#   if 0
-    Grid<int> * m_board = nullptr;
-#   endif
 };
 

@@ -29,15 +29,6 @@
 
 #include "Defs.hpp"
 
-enum class PlayControlId : uint8_t {
-    left, right, down, up,
-    rotate_left, rotate_right,
-    pause,
-    count
-};
-
-static constexpr const int k_play_control_id_count = static_cast<int>(PlayControlId::count);
-
 enum class PlayControlState : uint8_t {
     just_pressed,
     just_released,
@@ -96,6 +87,9 @@ struct JoystickEntry {
     JoystickEntry() {}
     explicit JoystickEntry(sf::Joystick::Axis axis_): axis(axis_) {}
 
+    JoystickEntry(sf::Joystick::Axis axis_, PlayControlId neg_, PlayControlId pos_):
+        axis(axis_), neg(neg_), pos(pos_) {}
+
     sf::Joystick::Axis axis;
     PlayControlId neg = PlayControlId::count, pos = PlayControlId::count;
 };
@@ -120,7 +114,9 @@ struct KeyEntry {
     PlayControlId id = PlayControlId::count;
 };
 
-using SfEventEntry = std::variant<JoystickEntry, ButtonEntry, KeyEntry>;
+struct UnmappedEntry {};
+
+using SfEventEntry = std::variant<JoystickEntry, ButtonEntry, KeyEntry, UnmappedEntry>;
 
 template <typename T, typename ... Types>
 const T * get_alternative(const std::variant<Types...> & var) {
@@ -153,6 +149,7 @@ class PlayControlEventHandler {
 public:
     using PlayControlSet = std::unordered_set<SfEventEntry, EntryHasher, EntryEqualTo>;
     using PlayControlArray = std::array<PlayControlState, k_play_control_id_count>;
+    using PlayControlSetConstIter = PlayControlSet::const_iterator;
 
     void update(const sf::Event &);
     // does not send still_released events
@@ -162,15 +159,18 @@ public:
         m_state_array = make_default_play_control_array();
     }
 
+    static PlayControlSet make_default_play_control_set();
+
 private:
+    static PlayControlSetConstIter find_by_event(const sf::Event &, const PlayControlSet &);
+
     static constexpr const float k_axis_activation_thershold = 10.f;
 
     static PlayControlArray make_default_play_control_array();
-    static PlayControlSet   make_default_play_control_set  ();
 
-    void update_key   (const sf::Event &);
-    void update_button(const sf::Event &);
-    void update_axis  (const sf::Event &);
+    void update_key   (const sf::Event &, PlayControlSetConstIter);
+    void update_button(const sf::Event &, PlayControlSetConstIter);
+    void update_axis  (const sf::Event &, PlayControlSetConstIter);
 
     void degrade_states();
     void send_events_(PlayControlEventReceiver &) const;
@@ -178,3 +178,6 @@ private:
     PlayControlArray m_state_array = make_default_play_control_array();
     PlayControlSet   m_mappings    = make_default_play_control_set  ();
 };
+
+// this is used for control assignments
+SfEventEntry convert_to_entry(const sf::Event &, PlayControlId);

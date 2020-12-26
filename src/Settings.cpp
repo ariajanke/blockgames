@@ -54,25 +54,56 @@ static Board load_board(std::istream &);
 
 Settings::Settings() {
     assert(Scenario::k_freeplay_scenario_count <= std::numeric_limits<int8_t>::max());
+#   if 0
     m_puyo_scenarios.resize(Scenario::k_freeplay_scenario_count);
     std::vector<Puyo> puyo_scenarios;
+#   endif
+    std::map<const char *, Puyo> scen_map;
+    // populate the map first before reading!
+    for (const auto & scen_ptr : Scenario::get_all_scenarios()) {
+        scen_map[scen_ptr->name()] = scen_ptr->default_settings();
+    }
     try {
         std::ifstream fin;
         fin.open(k_settings_filename);
+        fin.exceptions(std::ifstream::failbit | std::ifstream::badbit);
         // settings are not meant to be transferred between machines
+#       if 0
         auto scen_count = load_i8(fin);
         if (scen_count != Scenario::k_freeplay_scenario_count) {
             // do not load (invalidate) if scenario numbers do not match
             // (shouldn't I tell the user at some point?)
             return;
         }
-
+#       endif
+        for (const auto & scen_ptr : Scenario::get_all_scenarios()) {
+            auto itr = scen_map.find(scen_ptr->name());
+            assert(itr != scen_map.end());
+            auto & scen = itr->second;
+            if (scen.colors != k_unused_i) {
+                scen.colors = load_i8(fin);
+            }
+            if (scen.width != k_unused_i) {
+                scen.width = load_i8(fin);
+            }
+            if (scen.height != k_unused_i) {
+                scen.height = load_i8(fin);
+            }
+            if (scen.pop_requirement != k_unused_i) {
+                scen.pop_requirement = load_i8(fin);
+            }
+            if (std::equal_to<double>()(k_unused_d, scen.fall_speed)) {
+                scen.fall_speed = load_f32(fin);
+            }
+        }
+#       if 0
         puyo_scenarios.resize(scen_count);
         for (auto & board : puyo_scenarios) {
             static_cast<Board &>(board) = load_board(fin);
             board.fall_speed      = load_f32(fin);
             board.pop_requirement = load_i8(fin);
         }
+#       endif
         default_puyo_freeplay_scenario = load_i8(fin);
 
         Tetris tetris;
@@ -87,7 +118,10 @@ Settings::Settings() {
     }  catch (...) {
         //
     }
+    scen_map.swap(m_puyo_settings);
+#   if 0
     m_puyo_scenarios.swap(puyo_scenarios);
+#   endif
 }
 
 Settings::~Settings()
@@ -109,6 +143,23 @@ PolyominoEnabledSet enable_tetromino_only() {
     return rv;
 }
 
+const Settings::Puyo & Settings::get_puyo_settings(const char * name_ptr) const {
+    auto itr = m_puyo_settings.find(name_ptr);
+    if (itr == m_puyo_settings.end()) {
+        throw std::invalid_argument("Settings::get_puyo_settings: cannot find name pointer (was matching string contents provided?)");
+    }
+    return itr->second;
+}
+
+Settings::WritablePuyo Settings::get_puyo_settings(const char * name_ptr) {
+    auto itr = m_puyo_settings.find(name_ptr);
+    if (itr == m_puyo_settings.end()) {
+        throw std::invalid_argument("Settings::get_puyo_settings: cannot find name pointer (was matching string contents provided?)");
+    }
+    return WritablePuyo(itr->second);
+}
+
+#if 0
 Settings::Puyo & Settings::get_puyo_scenario(int idx)
     { return m_puyo_scenarios.at(std::size_t(idx)); }
 
@@ -117,18 +168,40 @@ const Settings::Puyo & Settings::get_puyo_scenario(int idx) const
 
 int Settings::puyo_scenario_count() const
     { return int(m_puyo_scenarios.size()); }
-
+#endif
 void save_settings(const Settings & settings) noexcept {
+    static constexpr const auto k_unused_i = Settings::k_unused_i;
+    static constexpr const auto k_unused_d = Settings::k_unused_d;
     try {
         std::ofstream fout;
         fout.open(k_settings_filename);
         // settings are not meant to be transferred between machines
+#       if 0
         assert(settings.puyo_scenario_count() <= std::numeric_limits<int8_t>::max());
         save_i8(fout, settings.puyo_scenario_count());
         for (auto & board : make_puyo_settings_view(settings)) {
             save_board(fout, board);
             save_f32(fout, float(board.fall_speed));
             save_i8 (fout, int8_t(board.pop_requirement));
+        }
+#       endif
+        for (const auto & [name_ptr, scen] : settings.m_puyo_settings) {
+            (void)name_ptr;
+            if (scen.colors != k_unused_i) {
+                save_i8(fout, scen.colors);
+            }
+            if (scen.width != k_unused_i) {
+                save_i8(fout, scen.width);
+            }
+            if (scen.height != k_unused_i) {
+                save_i8(fout, scen.height);
+            }
+            if (scen.pop_requirement != k_unused_i) {
+                save_i8(fout, scen.pop_requirement);
+            }
+            if (std::equal_to<double>()(k_unused_d, scen.fall_speed)) {
+                save_i8(fout, scen.fall_speed);
+            }
         }
         save_i8(fout, settings.default_puyo_freeplay_scenario);
 

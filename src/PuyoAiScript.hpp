@@ -136,7 +136,6 @@ private:
          const ConstBlockSubGrid & blocks);
 
     std::vector<VectorI> m_accessibles;
-    ControllerState m_controller_state;
 
     VectorI m_pivot_target    = k_no_location;
     VectorI m_adjacent_target = k_no_location;

@@ -78,13 +78,16 @@ bool EntryEqualTo::operator ()
 // ----------------------------------------------------------------------------
 
 void PlayControlEventHandler::update(const sf::Event & event) {
+    auto itr = find_by_event(event, m_mappings);
+    if (itr == m_mappings.end()) return;
+
     switch (event.type) {
     case sf::Event::KeyPressed: case sf::Event::KeyReleased:
-        return update_key(event);
+        return update_key(event, itr);
     case sf::Event::JoystickButtonPressed: case sf::Event::JoystickButtonReleased:
-        return update_button(event);
+        return update_button(event, itr);
     case sf::Event::JoystickMoved:
-        return update_axis(event);
+        return update_axis(event, itr);
     default: break;
     }
 }
@@ -94,7 +97,7 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
     degrade_states();
 }
 
-/* static */ PlayControlEventHandler::PlayControlArray PlayControlEventHandler::
+/* private static */ PlayControlEventHandler::PlayControlArray PlayControlEventHandler::
     make_default_play_control_array()
 {
     PlayControlArray rv;
@@ -149,13 +152,31 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
     return rv;
 }
 
-/* private */ void PlayControlEventHandler::update_key
-    (const sf::Event & event)
+/* private static */ PlayControlEventHandler::PlayControlSetConstIter
+    PlayControlEventHandler::find_by_event(const sf::Event & event, const PlayControlSet & pset)
 {
+    switch (event.type) {
+    case sf::Event::KeyPressed: case sf::Event::KeyReleased:
+        return pset.find(SfEventEntry(std::in_place_type_t<KeyEntry>(), KeyEntry(event.key.code)));
+    case sf::Event::JoystickButtonPressed: case sf::Event::JoystickButtonReleased:
+        return pset.find(SfEventEntry(std::in_place_type_t<ButtonEntry>(), ButtonEntry(event.joystickButton.button)));
+    case sf::Event::JoystickMoved:
+        return pset.find(SfEventEntry(std::in_place_type_t<JoystickEntry>(), JoystickEntry(event.joystickMove.axis)));
+    default: return pset.end();
+    }
+}
+
+/* private */ void PlayControlEventHandler::update_key
+    (const sf::Event & event, PlayControlSetConstIter itr)
+{
+
     assert(   event.type == sf::Event::KeyPressed
            || event.type == sf::Event::KeyReleased);
+    assert(itr != m_mappings.end());
+#   if 0
     auto itr = m_mappings.find(SfEventEntry(std::in_place_type_t<KeyEntry>(), KeyEntry(event.key.code)));
     if (itr == m_mappings.end()) return;
+#   endif
     auto id = std::get<KeyEntry>(*itr).id;
     bool is_press = event.type == sf::Event::KeyPressed;
     auto & state = m_state_array.at(static_cast<int>(id));
@@ -163,12 +184,15 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
 }
 
 /* private */ void PlayControlEventHandler::update_button
-    (const sf::Event & event)
+    (const sf::Event & event, PlayControlSetConstIter itr)
 {
     assert(   event.type == sf::Event::JoystickButtonPressed
            || event.type == sf::Event::JoystickButtonReleased);
+    assert(itr != m_mappings.end());
+#   if 0
     auto itr = m_mappings.find(SfEventEntry(std::in_place_type_t<ButtonEntry>(), ButtonEntry(event.joystickButton.button)));
     if (itr == m_mappings.end()) return;
+#   endif
     auto id = std::get<ButtonEntry>(*itr).id;
     bool is_press = event.type == sf::Event::JoystickButtonPressed;
     auto & state = m_state_array.at(static_cast<int>(id));
@@ -176,13 +200,15 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
 }
 
 /* private */ void PlayControlEventHandler::update_axis
-    (const sf::Event & event)
+    (const sf::Event & event, PlayControlSetConstIter itr)
 {
     assert(event.type == sf::Event::JoystickMoved);
+#   if 0
     auto itr = m_mappings.find(SfEventEntry(
         std::in_place_type_t<JoystickEntry>(), JoystickEntry(event.joystickMove.axis)));
     if (itr == m_mappings.end()) return;
-
+#   endif
+    assert(m_mappings.end() != itr);
     auto pos_id = std::get<JoystickEntry>(*itr).pos;
     auto neg_id = std::get<JoystickEntry>(*itr).neg;
     auto & pos_state = m_state_array.at(static_cast<int>(pos_id));
@@ -235,5 +261,24 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
         assert(idx < static_cast<std::size_t>(PlayControlId::count));
         if (state == PlayControlState::still_released) continue;
         receiver.handle_event(PlayControlEvent(static_cast<PlayControlId>(idx), state));
+    }
+}
+
+/* free fn */ SfEventEntry convert_to_entry(const sf::Event & event, PlayControlId pid) {
+    static constexpr const auto k_min_assignment_thershold = 80.f;
+    if (pid == PlayControlId::count) return UnmappedEntry();
+    switch (event.type) {
+    case sf::Event::KeyReleased:
+        return KeyEntry(event.key.code, pid);
+    case sf::Event::JoystickButtonReleased:
+        return ButtonEntry(event.joystickButton.button, pid);
+    case sf::Event::JoystickMoved:
+        if (magnitude(event.joystickMove.position) < k_min_assignment_thershold)
+            return UnmappedEntry();
+        else if (event.joystickMove.position < 0.f)
+            return JoystickEntry(event.joystickMove.axis, pid, PlayControlId::count);
+        else
+            return JoystickEntry(event.joystickMove.axis, PlayControlId::count, pid);
+    default: return UnmappedEntry();
     }
 }

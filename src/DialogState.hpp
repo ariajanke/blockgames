@@ -38,7 +38,7 @@ public:
 
 private:
     void setup_(Settings &) override;
-    void update(double) override {}
+    void update(double) override;
     void process_event(const sf::Event & event) override;
     double width() const override;
     double height() const override;
