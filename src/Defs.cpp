@@ -65,16 +65,10 @@ BlockId decay_block(BlockId bid) {
 }
 
 BlockId map_int_to_color(int n) {
-    using namespace BlockIdShorthand;
-    auto verify_is_color = [](BlockId bid) {
-        if (is_block_color(bid)) return bid;
-        throw std::runtime_error("map_int_to_color: returning block id that is not a color.");
-    };
-    switch (n) {
-    case 1: case 2: case 3: case 4: case 5:
-        return verify_is_color(static_cast<BlockId>(n));
-    default: throw std::invalid_argument("map_int_to_color: Only integers in [1 5] can be mapped to block ids.");
-    }
+    // jesus fucking christ, what was wrong with me?!
+    BlockId bid = static_cast<BlockId>(n);
+    if (is_block_color(bid)) return bid;
+    throw std::runtime_error("map_int_to_color: returning block id that is not a color.");
 }
 
 UString to_ustring(const std::string & str) {

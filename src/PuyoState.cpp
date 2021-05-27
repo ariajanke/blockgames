@@ -510,17 +510,29 @@ PuyoStateVS::PuyoStateVS() {}
     if (!board.is_ready()) {
         int other_delta = m_score_board.take_last_delta(is_p1 ? 1 : 0);
         if (other_delta != 0) {
-            int punishment = other_delta / 4;
+            int punishment = other_delta*(1 + other_delta / 8) / 4;
             BlockGrid fallins;
             fallins.set_size(board.width(), board.height(), k_empty_block);
+            int last_y = 0;
+            auto choose_random_refuge = [this]() {
+                return (IntDistri(0, 3)(m_refuge_rng) == 0) ? BlockId::hard_glass : BlockId::glass;
+            };
             for (VectorI r; r != fallins.end_position(); r = fallins.next(r)) {
-                if (punishment == 0) break;
-                auto id = (IntDistri(0, 3)(m_refuge_rng) == 0) ? BlockId::hard_glass : BlockId::glass;
-#               if 0
-                            k_hard_glass_block : k_glass_block;
-#               endif
-                fallins(r) = id;
+                if (punishment < fallins.width()) break;
+                fallins(r) = choose_random_refuge();
+                last_y = r.y;
                 --punishment;
+            }
+            ++last_y;
+            if (punishment != 0 && last_y < fallins.height()) {
+                std::vector<int> xs;
+                xs.resize(fallins.width());
+                std::iota(xs.begin(), xs.end(), 0);
+                std::shuffle(xs.begin(), xs.end(), m_refuge_rng);
+                xs.resize(punishment);
+                for (int x : xs) {
+                    fallins(x, last_y) = choose_random_refuge();
+                }
             }
             board.push_fall_in_blocks(fallins);
         }
