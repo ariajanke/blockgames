@@ -4,3 +4,6 @@
 [submodule "lib/ksg"]
 	path = lib/ksg
 	url = https://github.com/ariajanke/ksg.git
+[submodule "lib/asgl"]
+	path = lib/asgl
+	url = git@github.com:ariajanke/asgl.git

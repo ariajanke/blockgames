@@ -21,8 +21,11 @@
 #include "Graphics.hpp"
 
 #include <common/SubGrid.hpp>
+#include <common/SfmlVectorTraits.hpp>
 
 #include <SFML/Graphics/RenderTarget.hpp>
+
+#include <asgl/sfml/SfmlEngine.hpp>
 
 #include <stdexcept>
 #include <memory>
@@ -37,6 +40,7 @@ namespace {
 
 using ColorGrid = Grid<sf::Color>;
 using ColorGroupInfo = std::tuple<sf::Color, VectorI>;
+using cul::convert_to;
 
 constexpr const int k_color_group_size = 4;
 constexpr const int k_score_start_y = (k_color_group_size*2 + 2)*k_block_size;
@@ -124,7 +128,7 @@ const uint8_t * get_icon_image() {
     return reinterpret_cast<const uint8_t *>(&*grid.begin());
 }
 
-const sf::Texture & load_builtin_block_texture() {
+/* static */ const sf::Texture & BuiltinBlockGraphics::as_texture() {
     static std::unique_ptr<sf::Texture> rv;
     if (rv) { return *rv; }
 
@@ -132,6 +136,27 @@ const sf::Texture & load_builtin_block_texture() {
     rv->loadFromImage(to_image(builtin_blocks()));
 
     return *rv;
+}
+
+static std::shared_ptr<asgl::ImageResource> load_builtin_as_asgl_res(asgl::SfmlFlatEngine * engine) {
+    static std::shared_ptr<asgl::ImageResource> rv;
+    if (rv) return rv;
+    if (!engine) {
+        throw std::runtime_error("Builtin block resource must be first loaded with the engine.");
+    }
+    return (rv = engine->make_image_from(builtin_blocks()));
+}
+
+/* static */ std::shared_ptr<asgl::ImageResource> BuiltinBlockGraphics::as_asgl_image(asgl::SfmlFlatEngine & engine) {
+    return load_builtin_as_asgl_res(&engine);
+}
+
+/* static */ std::shared_ptr<asgl::ImageResource> BuiltinBlockGraphics::as_asgl_image() {
+    return load_builtin_as_asgl_res(nullptr);
+}
+
+const sf::Texture & load_builtin_block_texture() {
+    return BuiltinBlockGraphics::as_texture();
 }
 
 // <-------------------------- block drawer helpers -------------------------->
@@ -296,7 +321,7 @@ const ColorGrid & builtin_blocks() {
         VectorI(0, (k_color_group_size*2 + 1)*k_block_size),
         k_block_size*4, k_block_size));
     add_builtin_score_numbers(make_sub_grid(grid,
-        VectorI(0, k_score_start_y), SubGrid<int>::k_rest_of_grid, 2*k_block_size));
+        VectorI(0, k_score_start_y), cul::k_rest_of_grid, 2*k_block_size));
     add_builtin_controls(make_sub_grid(grid,
         VectorI(0, k_score_start_y + k_block_size), k_block_size*7, k_block_size*2));
     return *rv;
@@ -349,7 +374,8 @@ ColorGroupInfo get_color_group_info(BlockId color) {
 }
 
 sf::IntRect to_tile_rect(VectorI loc) {
-    return sf::IntRect(loc, VectorI(1, 1)*k_block_size);
+    return sf::IntRect(convert_to<sf::Vector2i>(loc),
+                       sf::Vector2i(1, 1)*k_block_size);
 }
 
 void render_blocks
@@ -361,7 +387,7 @@ void render_blocks
 
     for (VectorI r; r != blocks.end_position(); r = blocks.next(r)) {
         if (blocks(r) == k_empty_block) continue;
-        brush.setPosition(sf::Vector2f(r*k_block_size) + brush_.getPosition());
+        brush.setPosition(convert_to<sf::Vector2f>(r*k_block_size) + brush_.getPosition());
         brush.setColor(base_color_for_block(blocks(r)));
 
         brush.setTextureRect([&blocks, r, do_block_merging]() {

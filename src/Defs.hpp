@@ -27,11 +27,17 @@
 
 #include <common/Grid.hpp>
 #include <common/SubGrid.hpp>
-
+#if 0
 #include <ksg/Text.hpp>
+#endif
+#include <asgl/Text.hpp>
 
-using VectorI = sf::Vector2i;
-using VectorD = sf::Vector2<double>;
+using cul::Grid;
+using cul::SubGrid;
+using cul::ConstSubGrid;
+using asgl::UString;
+using VectorI = cul::Vector2<int>;
+using VectorD = cul::Vector2<double>;
 
 enum class GameSelection {
     puyo_clone, tetris_clone, samegame_clone, columns_clone,
@@ -164,10 +170,46 @@ enum class PlayControlId : uint8_t {
     count
 };
 
+enum class PlayControlState : uint8_t {
+    just_pressed,
+    just_released,
+    still_pressed,
+    still_released,
+    count // or no state
+};
+
+struct PlayControlEvent {
+    PlayControlEvent() {}
+    PlayControlEvent(PlayControlId id_, PlayControlState state_):
+        id(id_), state(state_) {}
+    PlayControlId    id    = PlayControlId   ::count;
+    PlayControlState state = PlayControlState::count;
+};
+
+inline bool are_same(const PlayControlEvent & lhs, const PlayControlEvent & rhs) {
+    return    lhs.id    == rhs.id
+           && lhs.state == rhs.state;
+}
+
+inline bool operator == (const PlayControlEvent & lhs, const PlayControlEvent & rhs)
+    { return are_same(lhs, rhs); }
+
+inline bool operator != (const PlayControlEvent & lhs, const PlayControlEvent & rhs)
+    { return !are_same(lhs, rhs); }
+
+inline bool is_pressed(const PlayControlState & state) {
+    return    state == PlayControlState::just_pressed
+           || state == PlayControlState::still_pressed;
+}
+
+inline bool is_pressed(const PlayControlEvent & pce) {
+    return is_pressed(pce.state);
+}
+
 static constexpr const int k_play_control_id_count = static_cast<int>(PlayControlId::count);
-
+#if 0
 using UString = ksg::Text::UString;
-
+#endif
 UString to_ustring(const std::string &);
 
 template <typename CharType>
@@ -177,3 +219,7 @@ const CharType * find_string_end(const CharType * sptr) {
 }
 
 GameSelection to_game_selection(std::size_t idx);
+
+inline cul::Rectangle<int> to_ui_rect(const sf::IntRect & rect) {
+    return cul::Rectangle<int> { rect.left, rect.top, rect.width, rect.height };
+}

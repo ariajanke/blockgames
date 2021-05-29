@@ -18,10 +18,17 @@
 *****************************************************************************/
 
 #include "PlayControl.hpp"
+#include "AppState.hpp"
 
 #include <common/Util.hpp>
 
 #include <cassert>
+
+namespace {
+
+using cul::magnitude;
+
+} // end of <anonymous> namespace
 
 static PlayControlState update_state(PlayControlState old_state, bool is_press) {
     if (is_pressed(old_state) == is_press) {
@@ -29,9 +36,9 @@ static PlayControlState update_state(PlayControlState old_state, bool is_press) 
     }
     return is_press ? PlayControlState::just_pressed : PlayControlState::just_released;
 }
-
+#if 0
 PlayControlEventReceiver::~PlayControlEventReceiver() {}
-
+#endif
 FallingPieceBase::~FallingPieceBase() {}
 
 std::size_t EntryHasher::operator () (const SfEventEntry & entry) const noexcept
@@ -92,7 +99,7 @@ void PlayControlEventHandler::update(const sf::Event & event) {
     }
 }
 
-void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
+void PlayControlEventHandler::send_events(AppState & receiver) {
     send_events_(receiver);
     degrade_states();
 }
@@ -225,7 +232,7 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
     }
 
     // deactivation should be prioritized
-    std::array<PlayControlEvent, 2> arr = {
+    std::array arr = {
         PlayControlEvent(pos_id, pos_state),
         PlayControlEvent(neg_id, neg_state)
     };
@@ -254,13 +261,13 @@ void PlayControlEventHandler::send_events(PlayControlEventReceiver & receiver) {
 }
 
 /* private */ void PlayControlEventHandler::send_events_
-    (PlayControlEventReceiver & receiver) const
+    (AppState & receiver) const
 {
     for (const auto & state : m_state_array) {
         auto idx = std::size_t(&state - &m_state_array.front());
         assert(idx < static_cast<std::size_t>(PlayControlId::count));
         if (state == PlayControlState::still_released) continue;
-        receiver.handle_event(PlayControlEvent(static_cast<PlayControlId>(idx), state));
+        receiver.process_play_event(PlayControlEvent(static_cast<PlayControlId>(idx), state));
     }
 }
 

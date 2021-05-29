@@ -3,10 +3,11 @@ CONFIG  -= c++11
 
 QMAKE_CXXFLAGS += -std=c++17 -pedantic -Wall
 QMAKE_LFLAGS   += -std=c++17
-LIBS           += -lsfml-graphics -lsfml-window -lsfml-system -lksg -lcommon \
+LIBS           += -lsfml-graphics -lsfml-window -lsfml-system -lasg -lcommon \
                   -lX11 \ # -ldiscord_game_sdk \
-                  -L/usr/lib/x86_64-linux-gnu -L$$PWD/../lib/cul -L$$PWD/../lib/ksg
-                  -L$$PWD/../../ext/discord-sdk/lib/x86_64
+                  -L/usr/lib/x86_64-linux-gnu -L$$PWD/../lib/cul -L$$PWD/../lib/ksg \
+                  -L$$PWD/../lib/asgl
+                  #-L$$PWD/../../ext/discord-sdk/lib/x86_64
 
 linux {
     QMAKE_CXXFLAGS += -DMACRO_PLATFORM_LINUX -DMACRO_TEST_DRIVER_ENTRY_FUNCTION=enter_tests_driver
@@ -91,4 +92,5 @@ HEADERS += \
 INCLUDEPATH += \
     ../lib/cul/inc \
     ../lib/ksg/inc \
+    ../lib/asgl/inc \
     ../../ext/discord-sdk/cpp

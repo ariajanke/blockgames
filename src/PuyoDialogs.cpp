@@ -53,6 +53,27 @@
         });
     }
     if (auto * fall_speed = puyo_settings().fall_speed_ptr()) {
+        m_fall_speed_text.set_text_width(200);
+        auto num = to_ustring(std::to_string(*fall_speed));
+        m_fall_speed_text.set_entered_string(to_ustring(std::to_string(*fall_speed)));
+
+        m_fall_speed_text.set_check_string_event(
+            [fall_speed](const UString & new_string, UString & display_string)
+        {
+            static constexpr const double k_min_change = 0.05;
+            double out = 0.;
+            if (!cul::string_to_number(new_string.begin(), new_string.end(), out)) {
+                return false;
+            }
+            if (cul::magnitude(out - *fall_speed) < k_min_change) return false;
+            if (out < 0. || out > 10.) return false;
+            display_string = new_string;
+            *fall_speed = out;
+            return true;
+        });
+    }
+#   if 0
+    if (auto * fall_speed = puyo_settings().fall_speed_ptr()) {
         m_fall_speed_text.set_width(200.f);
         auto num = to_ustring(std::to_string(*fall_speed));
         m_fall_speed_text.set_string(to_ustring(std::to_string(*fall_speed)));
@@ -71,24 +92,6 @@
             string_to_number(m_fall_speed_text.string(), *fall_speed);
         });
     }
-#   if 0
-    m_fall_speed_text.set_width(200.f);
-    auto num = to_ustring(std::to_string(puyo_settings().fall_speed));
-    m_fall_speed_text.set_string(to_ustring(std::to_string(puyo_settings().fall_speed)));
-
-    m_fall_speed_text.set_character_filter([this](const UString & ustr) {
-        double out = 0.;
-        if (!string_to_number(ustr, out)) return false;
-        if (out > 0. && out < 10.) {
-            puyo_settings().fall_speed = out;
-            std::cout << "set fall speed " << out << " bps" << std::endl;
-            return true;
-        }
-        return false;
-    });
-    m_fall_speed_text.set_text_change_event([this]() {
-        string_to_number(m_fall_speed_text.string(), puyo_settings().fall_speed);
-    });
 #   endif
     m_back.set_press_event([this]() {
         set_next_state(Dialog::make_top_level_dialog(GameSelection::puyo_clone));
@@ -103,7 +106,7 @@
     }
     m_board_config.assign_number_of_colors_pointer(puyo_settings().color_count_ptr());
 
-    auto adder = begin_adding_widgets(get_styles());
+    auto adder = begin_adding_widgets(/*get_styles()*/);
     if (puyo_settings().pop_requirement_ptr()) {
         adder.add(m_pop_req_notice).add_horizontal_spacer().add(m_pop_req_slider).add_line_seperator();
     }
@@ -135,23 +138,31 @@ namespace {
 
 using ConstScenarioCont = std::vector<ConstScenarioPtr>;
 using ScenarioStrFunc = const char * (Scenario::*)() const;
-using TextSize = ksg::Text::TextSize;
+using TextSize = asgl::Size;// ksg::Text::TextSize;
 
 static constexpr const int k_wrap_limit = 80;
 
 template <typename T, typename U>
 std::vector<T> move_and_convert(std::vector<U> &&);
-
+#if 0
 const sf::Font & get_global_font(const ksg::StyleMap &);
 
 template <ScenarioStrFunc get_str>
 TextSize get_max_dims(const sf::Font &, const ConstScenarioCont &, int char_size);
-
+#endif
 UString wrap_string(const UString &);
 #if 0
 const ConstScenarioCont s_scenarios =
     move_and_convert<ConstScenarioPtr>(Scenario::make_all_scenarios());
 #endif
+
+template <ScenarioStrFunc get_str>
+MaxTextSizer net_up_string_maximums(TextArea & target);
+
+void set_to_maximum(MaxTextSizer &);
+
+void revert_to_front(MaxTextSizer &);
+
 } // end of <anonymous> namespace
 
 /* private */ void PuyoScenarioDialog::setup_() {
@@ -161,11 +172,16 @@ const ConstScenarioCont s_scenarios =
     m_scen_select_notice.set_string(
         U"When you select a free play scanario, it will become the scenario\n"
          "you play when you click \"Free Play\" on the main menu.");
-
+#   if 0
     static const constexpr int k_char_size = 18;
     const sf::Font & font = get_global_font(get_styles());
-
+#   endif
     m_name_notice.set_string(U"Name:");
+    m_desc_notice.set_string(U"Description:");
+    m_desc_notice.set_limiting_line(400);
+    m_max_sizers.emplace_back(net_up_string_maximums<&Scenario::name>(m_name));
+    m_max_sizers.emplace_back(net_up_string_maximums<&Scenario::description>(m_desc));
+#   if 0
     m_name_notice.set_character_size(24);
     auto sz = get_max_dims<&Scenario::name>(font, s_scenarios, k_char_size);
     m_name.set_size(sz.width, sz.height);
@@ -178,7 +194,7 @@ const ConstScenarioCont s_scenarios =
     for (auto * ta_ptr : { &m_name_notice, &m_name, &m_desc_notice, &m_desc }) {
         ta_ptr->set_character_size(k_char_size);
     }
-
+#   endif
     m_play.set_string(U"Play");
     m_play.set_press_event([this]() {
         auto scen_clone = get_selected_scenario().clone();
@@ -217,7 +233,7 @@ const ConstScenarioCont s_scenarios =
     });
 
     flip_to_scenario();
-    begin_adding_widgets(get_styles()).
+    begin_adding_widgets(/*get_styles()*/).
         add(m_scen_select_notice).add_line_seperator().
         add(m_name_notice).add_line_seperator().
         add(m_name).add_line_seperator().
@@ -227,6 +243,21 @@ const ConstScenarioCont s_scenarios =
         add(m_back).add_horizontal_spacer().add(m_play)
             .add_horizontal_spacer().add_horizontal_spacer().add_horizontal_spacer()
             .add(m_settings);
+}
+
+/* private */ void PuyoScenarioDialog::stylize(const asgl::StyleMap & map) {
+    Dialog::stylize(map);
+    // choose and keep maximum strings
+    std::for_each(m_max_sizers.begin(), m_max_sizers.end(), set_to_maximum);
+}
+
+/* private */ void PuyoScenarioDialog::process_event(const asgl::Event & event) {
+    Dialog::process_event(event);
+    if (!m_max_sizers.empty()) {
+        // revert to first string
+        std::for_each(m_max_sizers.begin(), m_max_sizers.end(), revert_to_front);
+        m_max_sizers.clear();
+    }
 }
 
 /* private */ void PuyoScenarioDialog::flip_to_scenario() {
@@ -258,7 +289,7 @@ std::vector<T> move_and_convert(std::vector<U> && cont) {
     return rv;
 }
 #endif
-
+#if 0
 const sf::Font & get_global_font(const ksg::StyleMap & style_map) {
     static const char * const k_no_font_msg = "lmao where's the font?";
     auto itr = style_map.find(ksg::styles::k_global_font);
@@ -295,18 +326,53 @@ TextSize get_max_dims(const sf::Font & font, const ConstScenarioCont & cont, int
     }
     return rv;
 }
-
+#endif
 UString wrap_string(const UString & ustr) {
     using Iter = UString::const_iterator;
     UString t;
     t.reserve(ustr.size() + (ustr.size() % k_wrap_limit) + 3);
-    wrap_string_as_monowidth(ustr.begin(), ustr.end(), k_wrap_limit,
+    cul::wrap_string_as_monowidth(ustr.begin(), ustr.end(), k_wrap_limit,
         [&t](Iter beg, Iter end)
     {
         t.insert(t.end(), beg, end);
         t += U"\n";
     });
     return t;
+}
+
+
+template <ScenarioStrFunc get_str>
+MaxTextSizer net_up_string_maximums(TextArea & target) {
+    MaxTextSizer rv;
+    rv.target = &target;
+    for (auto & ptr : Scenario::get_all_scenarios()) {
+        rv.strings.emplace_back(to_ustring(std::invoke(get_str, &*ptr)));
+    }
+    return rv;
+}
+
+void set_to_maximum(MaxTextSizer & mts) {
+    assert(mts.target);
+    auto & target = *mts.target;
+    UiSize max_size_;
+    const UString * s = nullptr;
+    for (auto & ustr : mts.strings) {
+        target.set_string(ustr);
+        auto sz = target.size();
+        if (sz.width > max_size_.width) {
+            s = &ustr;
+        }
+        max_size_.width  = std::max(max_size_.width , sz.width );
+        max_size_.height = std::max(max_size_.height, sz.height);
+    }
+    assert(s);
+    target.set_viewport(asgl::Rectangle(VectorI(), max_size_));
+    target.set_string(*s);
+}
+
+void revert_to_front(MaxTextSizer & mts) {
+    assert(mts.target);
+    mts.target->set_string(mts.strings.front());
 }
 
 } // end of <anonymous> namespace

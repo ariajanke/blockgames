@@ -23,6 +23,12 @@
 
 #include <cassert>
 
+namespace {
+
+using cul::magnitude;
+
+} // end of <anonymou> namespace
+
 void FallingPiece::rotate_left(const BlockGrid & grid) {
     using VecI = VectorI;
     /**/ if (m_offset == VecI( 1,  0)) { set_rotation(grid, VecI( 0, -1)); }

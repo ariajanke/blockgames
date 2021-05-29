@@ -20,56 +20,21 @@
 #pragma once
 
 #include <cstdint>
-
+#if 1
 #include <SFML/Window/Event.hpp>
-
+#endif
 #include <vector>
 #include <unordered_set>
 #include <variant>
 
 #include "Defs.hpp"
 
-enum class PlayControlState : uint8_t {
-    just_pressed,
-    just_released,
-    still_pressed,
-    still_released,
-    count // or no state
-};
-
-struct PlayControlEvent {
-    PlayControlEvent() {}
-    PlayControlEvent(PlayControlId id_, PlayControlState state_):
-        id(id_), state(state_) {}
-    PlayControlId    id    = PlayControlId   ::count;
-    PlayControlState state = PlayControlState::count;
-};
-
-inline bool are_same(const PlayControlEvent & lhs, const PlayControlEvent & rhs) {
-    return    lhs.id    == rhs.id
-           && lhs.state == rhs.state;
-}
-
-inline bool operator == (const PlayControlEvent & lhs, const PlayControlEvent & rhs)
-    { return are_same(lhs, rhs); }
-
-inline bool operator != (const PlayControlEvent & lhs, const PlayControlEvent & rhs)
-    { return !are_same(lhs, rhs); }
-
-inline bool is_pressed(const PlayControlState & state) {
-    return    state == PlayControlState::just_pressed
-           || state == PlayControlState::still_pressed;
-}
-
-inline bool is_pressed(const PlayControlEvent & pce) {
-    return is_pressed(pce.state);
-}
-
+#if 0
 struct PlayControlEventReceiver {
     virtual ~PlayControlEventReceiver();
     virtual void handle_event(PlayControlEvent) = 0;
 };
-
+#endif
 // ----------------------------------------------------------------------------
 
 struct FallingPieceBase {
@@ -118,6 +83,8 @@ struct UnmappedEntry {};
 
 using SfEventEntry = std::variant<JoystickEntry, ButtonEntry, KeyEntry, UnmappedEntry>;
 
+void write_assignment_to(const SfEventEntry &, SfEventEntry &);
+
 template <typename T, typename ... Types>
 const T * get_alternative(const std::variant<Types...> & var) {
     if (std::holds_alternative<T>(var)) return &std::get<T>(var);
@@ -145,6 +112,10 @@ struct EntryEqualTo {
     bool operator () (const SfEventEntry & lhs, const SfEventEntry & rhs) const noexcept;
 };
 
+class AppState;
+#if 0
+class PlayControlEventReceiver;
+#endif
 class PlayControlEventHandler {
 public:
     using PlayControlSet = std::unordered_set<SfEventEntry, EntryHasher, EntryEqualTo>;
@@ -152,11 +123,33 @@ public:
     using PlayControlSetConstIter = PlayControlSet::const_iterator;
 
     void update(const sf::Event &);
+#   if 0
     // does not send still_released events
     void send_events(PlayControlEventReceiver &);
+#   endif
+    void send_events(AppState &);
+
     void set_mappings(const PlayControlSet & playset) {
         m_mappings    = playset;
         m_state_array = make_default_play_control_array();
+    }
+
+    void set_mapping(const SfEventEntry & entry) {
+        return;
+        // skip assignments for now :/
+        if (std::holds_alternative<UnmappedEntry>(entry)) {
+            throw std::invalid_argument("");
+        }
+        auto itr = m_mappings.find(entry);
+        if (itr == m_mappings.end()) {
+            m_mappings.insert(entry);
+        } else {
+            // overwrites previous entry
+            auto val = *itr;
+            m_mappings.erase(itr);
+            write_assignment_to(entry, val);
+            m_mappings.insert(val);
+        }
     }
 
     static PlayControlSet make_default_play_control_set();
@@ -173,7 +166,8 @@ private:
     void update_axis  (const sf::Event &, PlayControlSetConstIter);
 
     void degrade_states();
-    void send_events_(PlayControlEventReceiver &) const;
+
+    void send_events_(AppState &) const;
 
     PlayControlArray m_state_array = make_default_play_control_array();
     PlayControlSet   m_mappings    = make_default_play_control_set  ();

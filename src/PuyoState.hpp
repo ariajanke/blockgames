@@ -195,7 +195,7 @@ class PuyoStateN final : public BoardState {
 public:
     struct ContinueFall {};
     // needed by Scenario
-    using Response = MultiType<std::pair<BlockId, BlockId>, BlockGrid, ContinueFall>;
+    using Response = cul::MultiType<std::pair<BlockId, BlockId>, BlockGrid, ContinueFall>;
     explicit PuyoStateN(int scenario_number);
     explicit PuyoStateN(ScenarioPtr sptr):
         m_current_scenario(std::move(sptr))
@@ -209,7 +209,7 @@ private:
 
     int scale() const override { return 3; }
 
-    void handle_event(PlayControlEvent pce) override {
+    void process_play_event(PlayControlEvent pce) override {
         m_board.handle_event(pce);
     }
 
@@ -232,7 +232,7 @@ private:
 class PuyoStateVS final : public BoardState {
 public:
     // needed by Scenario
-    using Response = MultiType<std::pair<int, int>, BlockGrid>;
+    using Response = cul::MultiType<std::pair<int, int>, BlockGrid>;
     PuyoStateVS();
 
 private:
@@ -242,7 +242,7 @@ private:
 
     int scale() const override { return 3; }
 
-    void handle_event(PlayControlEvent pce) override;
+    void process_play_event(PlayControlEvent pce) override;
 
     void update(double) override;
 

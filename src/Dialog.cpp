@@ -28,11 +28,11 @@
 #include "ColumnsClone.hpp"
 
 #include "PlayControl.hpp"
-
+#if 0
 #include <ksg/TextArea.hpp>
 #include <ksg/TextButton.hpp>
 #include <ksg/ImageWidget.hpp>
-
+#endif
 #include <common/StringUtil.hpp>
 
 #include <iostream>
@@ -42,6 +42,7 @@
 namespace {
 
 using BoardOptions = BoardConfigDialog::BoardOptions;
+using cul::TypeTag;
 
 template <typename ... VarTypes>
 class VariantVisitorMaker {
@@ -170,8 +171,9 @@ std::unique_ptr<AppState> Dialog::get_next_app_state()
     { return std::move(m_next_state); }
 
 /* protected */ void Dialog::set_next_state(DialogPtr new_dialog_ptr) {
+#   if 0
     new_dialog_ptr->set_styles_ptr( m_styles_ptr );
-
+#   endif
     // settings are set by "setup" call on the app state
     auto ds = std::make_unique<DialogState>();
     ds->set_dialog(std::move(new_dialog_ptr));
@@ -198,14 +200,16 @@ std::unique_ptr<AppState> Dialog::get_next_app_state()
 
 void Dialog::setup(Settings & settings_) {
     m_settings = &settings_;
+#   if 0
     if (!m_styles_ptr) {
         auto & styles = *( m_styles_ptr = std::make_shared<ksg::StyleMap>() );
         styles = ksg::styles::construct_system_styles();
         styles[ksg::styles::k_global_font] = ksg::styles::load_font("font.ttf");
     }
+#   endif
     setup_();
 }
-
+#if 0
 void Dialog::set_styles_ptr(StyleMapPtr sptr)
     { m_styles_ptr = sptr; }
 
@@ -213,7 +217,7 @@ void Dialog::set_styles_ptr(StyleMapPtr sptr)
     if (m_styles_ptr) return *m_styles_ptr;
     throw std::runtime_error("Dialog::get_styles: styles pointer has not been set yet.");
 }
-
+#endif
 /* static */ DialogPtr Dialog::make_top_level_dialog(GameSelection gamesel)
     { return make_dialog<GameSelectionDialog>(gamesel); }
 
@@ -263,8 +267,10 @@ void BoardConfigDialog::setup() {
         });
     }
 
+    set_border_padding(0);
+#   if 0
     set_frame_border_size(0.f);
-
+#   endif
     auto adder = begin_adding_widgets();
     adder.add(m_board_config_notice).add_line_seperator();
     if (m_width_ptr) {
@@ -312,7 +318,7 @@ void BoardConfigDialog::assign_pointers_from_board_options(BoardOptions & option
         set_next_state(Dialog::make_top_level_dialog(GameSelection::samegame_clone));
     });
 
-    begin_adding_widgets(get_styles()).
+    begin_adding_widgets(/*get_styles()*/).
         add(m_about_single_block_popping).add_line_seperator().
         add(m_single_block_pop_notice).add_horizontal_spacer().add(m_single_block_pop).add_horizontal_spacer().add_line_seperator().
         add_horizontal_spacer().add(m_board_config).add_horizontal_spacer().add_line_seperator().
@@ -381,10 +387,12 @@ void GameSelectionDialog::setup_() {
             set_next_state(make_dialog<PuyoScenarioDialog>());
         }
     });
-#   if 0
+#   if 1
     m_settings.set_press_event([this]() {        
         switch (to_game_selection(m_game_slider.selected_option_index())) {
-        case Game::puyo_clone    : set_next_state(make_dialog<PuyoSettingsDialog           >()); break;
+#       if 0
+        case Game::puyo_clone    : set_next_state(make_dialog<PuyoSettingsDialog   >()); break;
+#       endif
         case Game::tetris_clone  : set_next_state(make_dialog<PolyominoSelectDialog>()); break;
         case Game::samegame_clone: set_next_state(make_dialog<SameGameDialog       >()); break;
         case Game::columns_clone : set_next_state(make_dialog<ColumnsSettingsDialog>()); break;
@@ -402,18 +410,20 @@ void GameSelectionDialog::setup_() {
     m_exit.set_press_event([this]()
         { set_next_state(std::make_unique<QuitState>()); });
 
-    begin_adding_widgets(get_styles()).
-        add_horizontal_spacer().add(m_game_slider).add_horizontal_spacer().add_line_seperator().
-        add(m_desc_notice).add_line_seperator().
-        add_horizontal_spacer().add(m_freeplay).add_horizontal_spacer().
-            add(m_scenario).add_horizontal_spacer().add(m_settings).add_horizontal_spacer().add_line_seperator().
-        add(m_stretcher).add_line_seperator().
-        add(m_configure_controls).add_line_seperator().
-        add_horizontal_spacer().add(m_exit).add_horizontal_spacer();
+    begin_adding_widgets()
+        .add_horizontal_spacer().add(m_game_slider).add_horizontal_spacer().add_line_seperator()
+        .add(m_desc_notice).add_line_seperator()
+        .add_horizontal_spacer().add(m_freeplay).add_horizontal_spacer()
+            .add(m_scenario).add_horizontal_spacer().add(m_settings).add_horizontal_spacer().add_line_seperator()
+        .add(m_stretcher).add_line_seperator()
+        .add(m_configure_controls)
+        .add_horizontal_spacer().add(m_exit);
 
 }
 
 void GameSelectionDialog::on_game_selection_update() {
+    // there is no obvious way for me to handle this
+#   if 0
     using Game = GameSelection;
     switch (to_game_selection(m_game_slider.selected_option_index())) {
     case Game::puyo_clone:
@@ -423,4 +433,5 @@ void GameSelectionDialog::on_game_selection_update() {
         m_scenario.set_visible(false);
         break;
     }
+#   endif
 }

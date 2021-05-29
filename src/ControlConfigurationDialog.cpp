@@ -36,6 +36,7 @@
 } ();
 
 /* private */ void ControlConfigurationDialog::setup_() {
+    using cul::wrap_string_as_monowidth;
     for (auto id : k_control_list) {
         setup_for_control(id);
         update_for_control(id);
@@ -51,8 +52,13 @@
     });
     m_info.set_string(info_string);
     m_pop_ani_info.set_string(k_ani_string);
+    m_pop_animation.set_image(BuiltinBlockGraphics::as_asgl_image());
+#   if 1
+    m_pop_animation.set_view_rectangle(to_ui_rect(texture_rect_for_control(PlayControlId::down, false)));
+#   else
     m_pop_animation.set_texture(load_builtin_block_texture(),
                                 texture_rect_for_control(PlayControlId::down, false));
+#   endif
     m_pop_animation.set_size(float(k_block_size*3), float(k_block_size*3));
 
     {
@@ -64,7 +70,10 @@
     {
     auto itr = m_height_stretchers.begin();
     for (int i = 0; i != ControlWidgetGroup::k_widget_count; ++i) {
+#       if 0
         m_column_frames[i].set_frame_border_size(0.f);
+#       endif
+        m_column_frames[i].set_border_padding(0);
         auto adder = m_column_frames[i].begin_adding_widgets();
         for (auto & groups : m_control_groups) {
             assert(itr != m_height_stretchers.end());
@@ -78,7 +87,7 @@
         set_next_state(make_dialog<GameSelectionDialog>(m_return_to_sel));
     });
 
-    auto adder = begin_adding_widgets(get_styles());
+    auto adder = begin_adding_widgets(/*get_styles()*/);
     adder.add_horizontal_spacer().add(m_info).add_horizontal_spacer().add_line_seperator()
         .add_horizontal_spacer().add(m_pop_ani_info).add(m_pop_animation).add_horizontal_spacer().add_line_seperator();
     for (auto & frame : m_column_frames) {
@@ -89,20 +98,34 @@
 }
 
 /* private */ void ControlConfigurationDialog::update(double et) {
+#   if 0
     m_control_handler.send_events(*this);
+#   endif
     if ((m_pop_preview_timer -= et) < 0.) {
         m_pop_preview_timer = k_pop_preview_duration;
         m_pop_preview_pressed = !m_pop_preview_pressed;
+#       if 1
+        m_pop_animation.set_view_rectangle(to_ui_rect(texture_rect_for_control(PlayControlId::down, m_pop_preview_pressed)));
+#       else
         m_pop_animation.reset_texture_rectangle(texture_rect_for_control(PlayControlId::down, m_pop_preview_pressed));
+#       endif
     }
 }
 
-/* private */ void ControlConfigurationDialog::process_event(const sf::Event & event) {
+/* private */ void ControlConfigurationDialog::process_event(const asgl::Event & event) {
     Dialog::process_event(event);
+#   if 1
+    // handled up stack, other events are skipped during assignment
+#   else
     if (m_currently_assigning == PlayControlId::count) {
         m_control_handler.update(event);
         return;
     }
+#   endif
+#   if 1
+    // no obvious replacement
+    // upstack has to communicate that a control is being assigned and which
+#   else
     auto update_controls = [this]() {
         for (auto id : k_control_list) {
             update_for_control(id);
@@ -110,20 +133,26 @@
         if (m_currently_assigning == PlayControlId::count) {
             for (auto & group : m_control_groups) {
                 auto & btn = group.reassign_btn;
+#               if 0
                 btn.set_visible(true);
+#               endif
                 btn.set_string(k_reassign_string);
             }
             m_control_handler.set_mappings(make_control_set());
         }
     };
-    if (event.type == sf::Event::KeyReleased) {
-        if (event.key.code == sf::Keyboard::Escape) {
+    if (auto * keyrel = event.as_pointer<asgl::KeyRelease>()) {
+        if (keyrel->key == asgl::keys::k_escape) {
             m_currently_assigning = PlayControlId::count;
             update_controls();
             return;
         }
     }
-
+#   endif
+#   if 1
+    // no obvious replacement
+#   else
+    // this looks like we're doing a control assignment
     auto eventry = convert_to_entry(event, m_currently_assigning);
     if (std::get_if<UnmappedEntry>(&eventry)) return;
     auto & entry = m_control_mapping[static_cast<std::size_t>(m_currently_assigning)];
@@ -136,13 +165,19 @@
     }
     m_currently_assigning = PlayControlId::count;
     update_controls();
+#   endif
 }
 
-/* private */ void ControlConfigurationDialog::handle_event(PlayControlEvent pce) {
+/* private */ void ControlConfigurationDialog::process_play_event(PlayControlEvent pce) {
     auto handle_flip = [this](PlayControlId id, bool is_pressed) {
         assert(id != PlayControlId::count);
+#       if 0
         m_control_groups[ static_cast<std::size_t>(id) ].representation
             .reset_texture_rectangle(texture_rect_for_control(id, is_pressed));
+#       else
+        m_control_groups[ static_cast<std::size_t>(id) ].representation
+            .set_view_rectangle(to_ui_rect(texture_rect_for_control(id, is_pressed)));
+#       endif
     };
     switch (pce.state) {
     case PlayControlState::just_pressed : handle_flip(pce.id, true ); break;
@@ -158,7 +193,12 @@
     group.release_rect = texture_rect_for_control(id, false);
 
     auto & repre = group.representation;
+#   if 1
+    repre.set_image(BuiltinBlockGraphics::as_asgl_image());
+    repre.set_view_rectangle(to_ui_rect(group.release_rect));
+#   else
     repre.set_texture(load_builtin_block_texture(), group.release_rect);
+#   endif
     repre.set_size(float(group.release_rect.width )*3.f,
                    float(group.release_rect.height)*3.f);
     {
@@ -188,7 +228,7 @@
 
 }
 
-/* private */ void ControlConfigurationDialog::hide_all_reasign_but(const ksg::TextButton & this_button) {
+/* private */ void ControlConfigurationDialog::hide_all_reasign_but(const TextButton & this_button) {
     for (auto & group : m_control_groups) {
         if (&group.reassign_btn == &this_button) continue;
         group.reassign_btn.set_visible(false);

@@ -23,6 +23,8 @@
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Texture.hpp>
 
+#include <common/SfmlVectorTraits.hpp>
+
 #include <random>
 
 #include <cassert>
@@ -30,6 +32,7 @@
 namespace {
 
 using Rng = std::default_random_engine;
+using cul::convert_to;
 
 template <typename T, bool (*del_f)(const T &)>
 void remove_from_container(std::vector<T> &);
@@ -158,11 +161,11 @@ void FallEffectsFull::do_fall_in
     brush.setTexture(*m_texture);
 
     for (const auto & effect : m_fall_effects) {
-        auto rd = normalize(VectorF(effect.to - effect.from));
+        auto rd = cul::normalize(convert_to<VectorF>(effect.to - effect.from));
         rd *= float(effect.fall_position*k_block_size);
         brush.setTextureRect(texture_rect_for(effect.color));
         brush.setColor(base_color_for_block(effect.color));
-        brush.setPosition(rd + VectorF(effect.from*k_block_size));
+        brush.setPosition(rd + convert_to<VectorF>(effect.from*k_block_size));
         target.draw(brush, states);
     }
     brush.setPosition(0.f, 0.f);
@@ -298,7 +301,7 @@ bool PopEffectsPartial::has_effects() const {
     sf::Sprite spt;
     spt.setTexture(*m_texture);
     spt.setTextureRect(trect);
-    spt.setPosition(sf::Vector2f(effect.location));
+    spt.setPosition(convert_to<sf::Vector2f>(effect.location));
     spt.setColor(color);
     target.draw(spt, states);
 }
@@ -310,7 +313,7 @@ bool PopEffectsPartial::has_effects() const {
     sf::Sprite brush;
     brush.setTexture(*m_texture);
     brush.setTextureRect(texture_rect_for_char(effect.identity));
-    brush.setPosition(sf::Vector2f(effect.location));
+    brush.setPosition(convert_to<sf::Vector2f>(effect.location));
     target.draw(brush, states);
 }
 
@@ -318,7 +321,7 @@ bool PopEffectsPartial::has_effects() const {
     (const FlashEffect & flash_effect)
 {
     using std::make_pair;
-    static constexpr const auto k_pi = get_pi<double>();
+    static constexpr const auto k_pi = cul::k_pi_for_type<double>;
 
     using RealDistri = std::uniform_real_distribution<double>;
     RealDistri top_interval   (0, k_pi / 4.);

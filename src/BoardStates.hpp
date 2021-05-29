@@ -29,7 +29,7 @@
 
 #include <random>
 
-class BoardState : public AppState, public PlayControlEventReceiver {
+class BoardState : public AppState/*, public PlayControlEventReceiver*/ {
 public:
     using BoardOptions = Settings::Board;
 
@@ -49,7 +49,7 @@ protected:
 
     double height() const final { return double(height_in_blocks()*k_block_size); }
 
-    void process_event(const sf::Event & event) override;
+    void process_ui_event(const asgl::Event & event) override;
 
     void update(double et) override;
 
@@ -60,7 +60,7 @@ protected:
     virtual int height_in_blocks() const = 0;
 
     /** Sets board settings */
-    void setup_(Settings &) final;
+    void setup_(Settings &, const asgl::StyleMap &) final;
 
 #   if 0
     int random_color(Rng & rng) const
@@ -73,7 +73,9 @@ protected:
 
 private:
     int m_max_colors = k_min_colors;
+#   if 0
     PlayControlEventHandler m_pc_handler;
+#   endif
 };
 
 // ----------------------------------------------------------------------------
@@ -86,7 +88,7 @@ public:
 
     void update(double et) override;
 
-    void handle_event(PlayControlEvent) override;
+    void process_play_event(PlayControlEvent) override;
 
 protected:
     virtual FallingPieceBase & piece_base() = 0;
@@ -140,8 +142,8 @@ class TetrisState final : public PauseableWithFallingPieceState {
 class SameGame final : public BoardState {
     void setup_board(const Settings &) override;
     void update(double et) override;
-    void process_event(const sf::Event &) override;
-    void handle_event(PlayControlEvent) override;
+    void process_ui_event(const asgl::Event &) override;
+    void process_play_event(PlayControlEvent) override;
 
     void draw(sf::RenderTarget &, sf::RenderStates) const override;
 

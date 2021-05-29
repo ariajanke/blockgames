@@ -23,11 +23,16 @@
 #include "Dialog.hpp"
 #include "BoardStates.hpp"
 #include "PuyoState.hpp"
-
+#if 0
 #include <ksg/TextArea.hpp>
 #include <ksg/OptionsSlider.hpp>
 #include <ksg/TextButton.hpp>
 #include <ksg/EditableText.hpp>
+#endif
+
+#include <asgl/EditableText.hpp>
+
+using asgl::EditableText;
 
 class PuyoSettingsDialog final : public Dialog {
 public:
@@ -47,17 +52,23 @@ private:
 
     PuyoSettings puyo_settings();
 
-    ksg::TextArea m_pop_req_notice;
-    ksg::TextArea m_fall_speed_notice;
+    TextArea m_pop_req_notice;
+    TextArea m_fall_speed_notice;
 
-    ksg::EditableText m_fall_speed_text;
-    ksg::OptionsSlider m_pop_req_slider;
+    EditableText m_fall_speed_text;
+    OptionsSlider m_pop_req_slider;
 
-    ksg::TextButton m_back;
+    TextButton m_back;
 
     BoardConfigDialog m_board_config;
     int m_scenario_index;
     const char * m_name_ptr = nullptr;
+};
+
+struct MaxTextSizer {
+    // always reverts to the first string (in front)
+    std::vector<UString> strings;
+    TextArea * target = nullptr;
 };
 
 class PuyoScenarioDialog final : public Dialog {
@@ -66,20 +77,26 @@ class PuyoScenarioDialog final : public Dialog {
     // - free play scenarios
     void setup_() override;
 
+    void stylize(const asgl::StyleMap &) override;
+
+    void process_event(const asgl::Event &) override;
+
     void flip_to_scenario();
 
     const Scenario & get_selected_scenario() const;
 
-    ksg::TextArea m_scen_select_notice;
+    TextArea m_scen_select_notice;
 
-    ksg::TextArea m_name_notice;
-    ksg::TextArea m_name;
-    ksg::TextArea m_desc_notice;
-    ksg::TextArea m_desc;
+    TextArea m_name_notice;
+    TextArea m_name;
+    TextArea m_desc_notice;
+    TextArea m_desc;
 
-    ksg::TextButton m_play;
-    ksg::TextButton m_settings;
+    TextButton m_play;
+    TextButton m_settings;
 
-    ksg::OptionsSlider m_scenario_slider;
-    ksg::TextButton m_back;
+    OptionsSlider m_scenario_slider;
+    TextButton m_back;
+
+    std::vector<MaxTextSizer> m_max_sizers;
 };

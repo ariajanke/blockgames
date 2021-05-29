@@ -105,6 +105,6 @@ class ColumnsState final : public PauseableWithFallingPieceState {
 class ColumnsSettingsDialog final : public Dialog {
     void setup_() override;
 
-    ksg::TextArea m_unimplemented;
-    ksg::TextButton m_back_to_main;
+    TextArea m_unimplemented;
+    TextButton m_back_to_main;
 };

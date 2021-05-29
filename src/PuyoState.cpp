@@ -22,10 +22,20 @@
 
 #include <SFML/Window/Event.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/Sprite.hpp>
+
+#include <common/DrawRectangle.hpp>
+#include <common/SfmlVectorTraits.hpp>
 
 #include <cassert>
 
 namespace {
+
+using cul::DrawRectangle;
+//using cul::convert_to;
+
+sf::Vector2f to_sfvecf(VectorI r)
+    { return cul::convert_to<sf::Vector2f>(r); }
 
 VectorI get_spawn_point(const ConstBlockSubGrid &);
 
@@ -101,8 +111,8 @@ const std::pair<BlockId, BlockId> BoardBase::k_empty_pair =
 void PuyoBoard::set_size(int width, int height) {
     m_blocks.clear();
     m_blocks.set_size(width, height, k_empty_block);
-    m_fef.setup(m_blocks.width(), m_blocks.height(), load_builtin_block_texture());
-    m_pef.assign_texture(load_builtin_block_texture());
+    m_fef.setup(m_blocks.width(), m_blocks.height(), BuiltinBlockGraphics::as_texture());
+    m_pef.assign_texture(BuiltinBlockGraphics::as_texture());
 }
 
 void PuyoBoard::assign_score_board
@@ -167,7 +177,7 @@ bool PuyoBoard::is_gameover() const {
         return;
     } else {
         sf::Sprite brush;
-        brush.setTexture(load_builtin_block_texture());
+        brush.setTexture(BuiltinBlockGraphics::as_texture());
         render_merged_blocks(m_blocks, brush, target, states);
     }
 
@@ -186,10 +196,10 @@ bool PuyoBoard::is_gameover() const {
     }
 
     sf::Sprite brush;
-    brush.setTexture(load_builtin_block_texture());
+    brush.setTexture(BuiltinBlockGraphics::as_texture());
     auto draw_block = [&target, &brush, &states](BlockId color, VectorI r) {
         brush.setTextureRect(texture_rect_for(color));
-        brush.setPosition(sf::Vector2f(r));
+        brush.setPosition(to_sfvecf(r));
         brush.setColor(base_color_for_block(color));
         target.draw(brush, states);
     };
@@ -197,8 +207,8 @@ bool PuyoBoard::is_gameover() const {
     // draw falling piece
     if (m_update_func == &PuyoBoard::update_piece) {
         DrawRectangle drect;
-        drect.set_position(sf::Vector2f(m_piece.location()*k_block_size) +
-                           sf::Vector2f(0.f, y_offset));
+        drect.set_position(to_sfvecf(
+            m_piece.location()*k_block_size + VectorI(0, y_offset)));
         drect.set_color(sf::Color::White);
         drect.set_size(float(k_block_size), float(k_block_size));
         target.draw(drect, states);
@@ -309,17 +319,17 @@ int PuyoScoreBoard::take_last_delta(int board) {
 {
     static const auto k_empty_pair = BoardBase::k_empty_pair;
     sf::Sprite brush;
-    brush.setTexture(load_builtin_block_texture());
+    brush.setTexture(BuiltinBlockGraphics::as_texture());
     auto draw_block = [&target, &brush, &states](BlockId color, VectorI r) {
         brush.setTextureRect(texture_rect_for(color));
-        brush.setPosition(sf::Vector2f(r));
+        brush.setPosition(to_sfvecf(r));
         brush.setColor(base_color_for_block(color));
         target.draw(brush, states);
     };
 
     if (m_next_piece != k_empty_pair || m_next_p2_piece != k_empty_pair) {
         brush.setColor(sf::Color::White);
-        brush.setPosition(sf::Vector2f(VectorI(0, 2)*k_block_size));
+        brush.setPosition(to_sfvecf(VectorI(0, 2)*k_block_size));
         brush.setTextureRect(texture_rect_for_next());
         target.draw(brush, states);
     }
@@ -336,10 +346,10 @@ int PuyoScoreBoard::take_last_delta(int board) {
 
     brush.setTextureRect(texture_rect_for_score());
     brush.setColor(sf::Color::White);
-    brush.setPosition(sf::Vector2f(VectorI(0, 0)*k_block_size));
+    brush.setPosition(to_sfvecf(VectorI(0, 0)*k_block_size));
     target.draw(brush, states);
 
-    brush.setPosition(sf::Vector2f(VectorI(0, 1)*k_block_size));
+    brush.setPosition(to_sfvecf(VectorI(0, 1)*k_block_size));
     {
     for (char c : pad_to_right(std::to_string(m_first_player_score), 6)) {
         if (c != ' ') {
@@ -421,7 +431,7 @@ PuyoStateVS::PuyoStateVS() {}
     return m_p1_board.height();
 }
 
-/* private */ void PuyoStateVS::handle_event(PlayControlEvent pce) {
+/* private */ void PuyoStateVS::process_play_event(PlayControlEvent pce) {
     m_p1_board.handle_event(pce);
 }
 
@@ -484,14 +494,14 @@ PuyoStateVS::PuyoStateVS() {}
         } else {
             // continue;
         }
-        drect.set_position(sf::Vector2f(r*k_block_size));
+        drect.set_position(to_sfvecf(r*k_block_size));
         target.draw(drect, states);
         drect.set_color(k_inaccess_color);
     }
 
     {
     sf::Sprite brush;
-    brush.setTexture(load_builtin_block_texture());
+    brush.setTexture(BuiltinBlockGraphics::as_texture());
     brush.setPosition(0.f, 0.f);
     //brush.setPosition(sf::Vector2f(VectorI(0, m_p1_board.width() + m_score_board.width())*k_block_size));
     for (char c : pad_to_right(std::to_string(m_matcher_ptr->states_int()), 6)) {

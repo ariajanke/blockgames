@@ -22,16 +22,16 @@
 #include "Defs.hpp"
 #include "Polyomino.hpp"
 #include "Dialog.hpp"
-
+#if 0
 #include <ksg/Frame.hpp>
 #include <ksg/Button.hpp>
 #include <ksg/TextButton.hpp>
 #include <ksg/TextArea.hpp>
 #include <ksg/OptionsSlider.hpp>
-
+#endif
 using EnabledPolyominoBits = std::bitset<Polyomino::k_total_polyomino_count>;
 
-class PolyominoDialogPage : public ksg::Frame {
+class PolyominoDialogPage : public UiFrame {
 public:
     using PolyominoItr = std::vector<Polyomino>::const_iterator;
     virtual PolyominoItr set
@@ -42,7 +42,7 @@ public:
 
 // ----------------------------------------------------------------------------
 
-class PolyominoButton final : public ksg::Button {
+class PolyominoButton final : public UiButton, public sf::Drawable {
 public:
     void set_polyomino(const Polyomino & poly);
 
@@ -59,13 +59,15 @@ private:
 
     static_assert(k_big_scale  *k_block_size*k_use_small_thershold <= k_pixels_for_blocks, "");
     static_assert(k_small_scale*k_block_size*k_max_size_in_blocks  <= k_pixels_for_blocks, "");
-
+#   if 1
     void draw(sf::RenderTarget & target, sf::RenderStates states) const override;
+#   endif
+    void draw(asgl::WidgetRenderer &) const override;
 
-    void issue_auto_resize() override;
+    void update_size() override;
 
     bool m_on = false;
-    VectorF m_polyomino_offset;
+    /*VectorF */ sf::Vector2f m_polyomino_offset;
     Polyomino m_polyomino;
     int m_scale = 2;
 };
@@ -103,13 +105,13 @@ private:
 
     EnabledPolyominoBits * m_enabled_polyominos = nullptr;
 
-    std::vector<ksg::TextArea  > m_set_notices;
-    std::vector<ksg::TextButton> m_set_endis_buttons;
+    std::vector<TextArea  > m_set_notices;
+    std::vector<TextButton> m_set_endis_buttons;
 
     BoardConfigDialog m_board_config;
-    ksg::TextArea m_poly_set_nfo;
+    TextArea m_poly_set_nfo;
 
-    ksg::TextArea m_all_off_notice;
+    TextArea m_all_off_notice;
 };
 
 // ----------------------------------------------------------------------------
@@ -133,10 +135,10 @@ private:
     EnabledPolyominoBits * m_enabled_polyominos = nullptr;
     std::size_t m_start_index;
 
-    ksg::TextArea m_activate_polyonmino_notice;
+    TextArea m_activate_polyonmino_notice;
 
     std::vector<PolyominoButton> m_buttons;
-    std::vector<ksg::TextArea  > m_poly_enabled_ta;
+    std::vector<TextArea  > m_poly_enabled_ta;
 };
 
 // ----------------------------------------------------------------------------
@@ -150,8 +152,8 @@ private:
 
     void flip_to_page(PolyominoDialogPage & page);
 
-    ksg::TextButton m_back_to_menu;
-    ksg::OptionsSlider m_page_slider;
+    TextButton m_back_to_menu;
+    OptionsSlider m_page_slider;
 
     std::vector<PagePtr> m_pages;
 #   if 0

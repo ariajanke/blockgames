@@ -20,8 +20,10 @@
 #pragma once
 
 #include "AppState.hpp"
-
+#if 0
 #include <ksg/StyleMap.hpp>
+#endif
+#include <asgl/StyleMap.hpp>
 
 class Dialog;
 class DialogPtrPriv {
@@ -37,14 +39,17 @@ public:
     void set_dialog(DialogPtr dialog);
 
 private:
-    void setup_(Settings &) override;
+    void setup_(Settings &, const asgl::StyleMap &) override;
     void update(double) override;
-    void process_event(const sf::Event & event) override;
+    void process_ui_event(const asgl::Event & event) override;
+    void process_play_event(PlayControlEvent) override;
+
     double width() const override;
     double height() const override;
     int scale() const override { return 1; }
     void draw(sf::RenderTarget &, sf::RenderStates) const override;
+    void draw_ui_elements(asgl::WidgetRenderer &) const override;
 
     DialogPtr m_dialog;
-    ksg::StyleMap m_style_map;
+    asgl::StyleMap m_style_map;
 };

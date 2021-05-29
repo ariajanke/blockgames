@@ -20,11 +20,26 @@
 #include "AppState.hpp"
 #include "Settings.hpp"
 
-void AppState::setup(SettingsPtr & settings) {
-    if (!settings) {
-        settings = std::make_unique<Settings>();
-    }
-    setup_(*settings);
+#include <cassert>
+
+/* static */ UpStackCom & UpStackCom::null_instance() {
+    class NullInstance final : public UpStackCom {
+        void listen_for_play_control_assignment(PlayControlId) final {}
+        void cancel_play_control_assignment() final {}
+    };
+    static NullInstance inst;
+    return inst;
+}
+
+// ----------------------------------------------------------------------------
+
+void AppState::setup(const asgl::StyleMap & stylemap) {
+    setup_(ensure_settings(), stylemap);
+}
+
+void AppState::assign_upstack_com(UpStackCom & upstackcom) {
+    (void)ensure_settings();
+    m_shared_info->upstack = &upstackcom;
 }
 
 sf::View AppState::window_view() const {
@@ -39,4 +54,24 @@ sf::View AppState::window_view() const {
 sf::Vector2u AppState::window_size() const {
     return sf::Vector2u(unsigned(int(window_view().getSize().x)*scale()),
                         unsigned(int(window_view().getSize().y)*scale()));
+}
+
+/* protected */ void AppState::listen_for_play_control_assignment
+    (PlayControlId playconid)
+{
+    assert(m_shared_info);
+    m_shared_info->upstack->listen_for_play_control_assignment(playconid);
+}
+
+/* protected */ void AppState::cancel_play_control_assignment() {
+    assert(m_shared_info);
+    m_shared_info->upstack->cancel_play_control_assignment();
+}
+
+/* private */ Settings & AppState::ensure_settings() {
+    if (!m_shared_info) {
+        m_shared_info = std::make_shared<SharedInfo>();
+        m_shared_info->settings_ptr = std::make_unique<Settings>();
+    }
+    return *m_shared_info->settings_ptr;
 }

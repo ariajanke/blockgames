@@ -22,6 +22,9 @@
 #include "DialogState.hpp"
 
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <asgl/sfml/SfmlEngine.hpp>
+
+#include <common/SfmlVectorTraits.hpp>
 
 #include <cassert>
 
@@ -52,29 +55,42 @@ void PolyominoButton::set_polyomino(const Polyomino & poly) {
     m_polyomino_offset.x = float(((low.x + high.x) / 2)*k_block_size);
     m_polyomino_offset.y = float(((low.y + high.y) / 2)*k_block_size);
 }
-
+// not dead, until a replacement is made this should not be removed!
+#if 1
 void PolyominoButton::draw(sf::RenderTarget & target, sf::RenderStates states) const {
     sf::Sprite brush;
-    auto start_offset = m_polyomino_offset + location()
-        + VectorF(1.f, 1.f)*padding()
+    using VectorF = sf::Vector2f;
+    using cul::convert_to;
+
+    auto start_offset = m_polyomino_offset + convert_to<VectorF>(location())
+        + VectorF(1.f, 1.f)*float(padding())
         + VectorF(1.f, 1.f)*float(k_pixels_for_blocks)*0.5f
         - VectorF(1.f, 1.f)*float(k_block_size)*0.5f;
-    brush.setTexture(load_builtin_block_texture());
+    brush.setTexture(BuiltinBlockGraphics::as_texture());
     brush.setTextureRect(texture_rect_for(BlockId::red));
     brush.setColor(m_on ? base_color_for_block(BlockId::red) : sf::Color(100, 100, 100));
     brush.scale(float(m_scale), float(m_scale));
-    sf::FloatRect bounds(location(), sf::Vector2f(width(), height()));
+    auto uibounds = bounds();
+    sf::FloatRect bounds(uibounds.left, uibounds.top, uibounds.width, uibounds.height);
     for (int i = 0; i != m_polyomino.block_count(); ++i) {
-        auto loc = start_offset + VectorF(m_polyomino.block_location(i)*k_block_size*m_scale);
+        auto loc = start_offset + convert_to<VectorF>(m_polyomino.block_location(i)*k_block_size*m_scale);
         brush.setPosition(loc);
         target.draw(brush, states);
     }
 }
 
-void PolyominoButton::issue_auto_resize() {
+void PolyominoButton::draw(asgl::WidgetRenderer & target) const {
+    draw_special_to(target, asgl::SfmlFlatEngine::to_item_key(asgl::sfml_items::k_special_draw_item));
+}
+
+#endif
+void PolyominoButton::update_size() {
+#   if 0
     set_size(padding()*2.f + k_pixels_for_blocks,
              padding()*2.f + k_pixels_for_blocks);
-    set_button_frame_size(k_pixels_for_blocks, k_pixels_for_blocks);
+#   endif
+    set_button_frame_size(k_pixels_for_blocks + padding()*2,
+                          k_pixels_for_blocks + padding()*2);
 }
 
 // ----------------------------------------------------------------------------
@@ -90,7 +106,10 @@ PolyominoItr PolyominoSetSelectPage::set
     (PolyominoItr cont_beg, PolyominoItr, PolyominoItr,
      EnabledPolyominoBits & enabledbits)
 {
+#   if 0
     set_frame_border_size(0.f);
+#   endif
+    set_border_padding(0);
     m_enabled_polyominos = &enabledbits;
     setup();
     return cont_beg;
@@ -106,7 +125,12 @@ void PolyominoSetSelectPage::update_selections() {
             if (m_enabled_polyominos->test(i)) all_off = false;
         }
     }
+    // also no obvious replacement
+#   if 0
     m_all_off_notice.set_visible(all_off);
+#   else
+    (void)all_off;
+#   endif
 }
 
 /* private */ void PolyominoSetSelectPage::setup() {
@@ -135,8 +159,13 @@ void PolyominoSetSelectPage::update_selections() {
     }
 
     m_all_off_notice.set_string(U"Note: if all polyominos are set to \"off\", then the program will force dominos to spawn during gameplay.");
-    m_all_off_notice.set_width(500.f);
+    m_all_off_notice.set_limiting_line(500);
+    // no obvious replacement for fixed width
+#   if 0
+    m_all_off_notice.set_width(500.f);   
     adder.add(m_all_off_notice);
+#   endif
+    adder.add_horizontal_spacer().add(m_all_off_notice).add_horizontal_spacer();
     update_selections();
 }
 
@@ -200,7 +229,11 @@ PolyominoItr PolyominoIndividualSelectPage::set
     (PolyominoItr cont_beg, PolyominoItr beg, PolyominoItr end,
      EnabledPolyominoBits & enabledbits)
 {
+#   if 0
     set_frame_border_size(0.f);
+#   else
+    set_border_padding(0);
+#   endif
     assert(cont_beg <= beg);
     assert(beg <= end);
     auto rv = beg + std::min(int(end - beg), k_max_polyominos_per_page);
@@ -248,7 +281,11 @@ PolyominoItr PolyominoIndividualSelectPage::set
 
     add_row_of_tas(sofar);
     for (auto & ta : m_poly_enabled_ta) {
+#       if 1
+        ta.set_limiting_line(100);
+#       else
         ta.set_width(100);
+#       endif
     }
 
     update_selections();
@@ -287,9 +324,12 @@ void PolyominoIndividualSelectPage::update_selections() {
         if (itr == all_p.end()) break;
         m_pages.emplace_back(std::make_unique<PolyominoIndividualSelectPage>());
     }
+    // no obvious replacement
+#   if 0
     for (auto & page_ptr : m_pages) {
         page_ptr->set_size(500, 500);
     }
+#   endif
 
     m_back_to_menu.set_string(U"Back to menu");
     {
@@ -297,7 +337,7 @@ void PolyominoIndividualSelectPage::update_selections() {
     for (std::size_t i = 0; i != m_pages.size(); ++i) {
         opts.push_back(U"Page " + to_ustring(std::to_string(i + 1)));
     }
-    m_page_slider.swap_options(opts);
+    m_page_slider.set_options(std::move(opts));
     }
 
     m_page_slider.set_option_change_event([this]() {
@@ -313,7 +353,7 @@ void PolyominoIndividualSelectPage::update_selections() {
 }
 
 /* private */ void PolyominoSelectDialog::flip_to_page(PolyominoDialogPage & page) {
-    begin_adding_widgets(get_styles()).
+    begin_adding_widgets(/*get_styles()*/).
         add(page).add_line_seperator().
         add(m_page_slider).add_line_seperator().
         add(m_back_to_menu);

@@ -37,6 +37,8 @@
 
 namespace {
 
+using namespace cul;
+
 bool test_GetEdgeValue(ts::TestSuite &);
 bool test_select_connected_blocks(ts::TestSuite &);
 bool test_make_blocks_fall(ts::TestSuite &);
@@ -403,13 +405,13 @@ bool test_columns_rotate(ts::TestSuite & suite) {
     return suite.has_successes_only();
 }
 
-class PceTester final : public PlayControlEventReceiver {
+class PceTester final : public AppState/* PlayControlEventReceiver */{
 public:
     PceTester() {}
     explicit PceTester(std::vector<PlayControlEvent> && vec)
         { set_expected(std::move(vec)); }
 
-    void handle_event(PlayControlEvent pce) override {
+    void process_play_event(PlayControlEvent pce) override {
         if (m_expected_events.empty()) return;
         if (are_same(pce, m_expected_events.back())) {
             m_expected_events.pop_back();
@@ -422,6 +424,18 @@ public:
         m_expected_events = vec;
         std::reverse(m_expected_events.begin(), m_expected_events.end());
     }
+
+    void update(double) final {}
+
+    double width() const final { return 0.; }
+    double height() const final { return 0.; }
+    int scale() const final { return 1; }
+    bool is_quiting_application() const final { return false; }
+
+    void process_ui_event(const asgl::Event &) final {}
+    void draw(sf::RenderTarget &, sf::RenderStates) const final {}
+    void setup_(Settings &, const asgl::StyleMap &) final {}
+
 private:
     std::vector<PlayControlEvent> m_expected_events;
 };

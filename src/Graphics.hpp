@@ -21,7 +21,19 @@
 
 #include "Defs.hpp"
 
-namespace sf { class RenderTarget; }
+#include <SFML/Graphics/Image.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/Texture.hpp>
+
+namespace sf {
+    class RenderTarget;
+    class Sprite;
+}
+
+namespace asgl {
+    class SfmlFlatEngine;
+    struct ImageResource;
+}
 
 sf::Image to_image(const Grid<sf::Color> &);
 
@@ -31,7 +43,13 @@ constexpr const int k_icon_size = 64;
 
 const uint8_t * get_icon_image();
 
-const sf::Texture & load_builtin_block_texture();
+struct BuiltinBlockGraphics {
+    static const sf::Texture & as_texture();
+    static std::shared_ptr<asgl::ImageResource> as_asgl_image(asgl::SfmlFlatEngine &);
+    static std::shared_ptr<asgl::ImageResource> as_asgl_image();
+};
+
+[[deprecated]] const sf::Texture & load_builtin_block_texture();
 
 // ----------------------------------------------------------------------------
 

@@ -20,32 +20,36 @@
 #pragma once
 
 #include "Dialog.hpp"
-
+#if 0
 #include <ksg/ImageWidget.hpp>
+#endif
+#include <asgl/ImageWidget.hpp>
 
-class HeightStretcher final : public ksg::Widget {
+using asgl::ImageWidget;
+
+class HeightStretcher final : public UiWidget {
 public:
     void set_height(float h) { m_height = h; }
 private:
-    void process_event(const sf::Event &) override {}
+    void process_event(const asgl::Event &) override {}
 
-    void set_location(float x, float y) override { m_location = VectorF(x, y); }
+    void set_location_(int x, int y) override { m_location = UiVector(x, y); }
 
-    VectorF location() const override { return m_location; }
+    UiVector location() const override { return m_location; }
 
-    float width() const override { return 0.f; }
+    UiSize size() const override { return UiSize(0, m_height); }
 
-    float height() const override { return m_height; }
+    void stylize(const asgl::StyleMap &) override {}
 
-    void set_style(const ksg::StyleMap &) override {}
+    void draw(asgl::WidgetRenderer &) const override {}
 
-    void draw(sf::RenderTarget &, sf::RenderStates) const override {}
+    void update_size() override {}
 
     float m_height = 1.f;
-    VectorF m_location;
+    UiVector m_location;
 };
 
-class ControlConfigurationDialog final : public Dialog, public PlayControlEventReceiver {
+class ControlConfigurationDialog final : public Dialog/*, public PlayControlEventReceiver*/ {
 public:
     ControlConfigurationDialog(GameSelection sel): m_return_to_sel(sel) {}
 
@@ -60,13 +64,13 @@ private:
         {}
         sf::IntRect press_rect, release_rect;
 
-        ksg::ImageWidget representation;
-        ksg::TextArea keyboard_assignment;
-        ksg::TextArea gamepad_assignment;
-        ksg::TextButton reassign_btn;
-        ksg::TextButton revert_to_default;
+        ImageWidget representation;
+        TextArea keyboard_assignment;
+        TextArea gamepad_assignment;
+        TextButton reassign_btn;
+        TextButton revert_to_default;
 
-        std::array<ksg::Widget *, k_widget_count> widgets;
+        std::array<UiWidget *, k_widget_count> widgets;
     };
 
     static constexpr const auto k_info_string = U""
@@ -82,32 +86,32 @@ private:
 
     void setup_() override;
     void update(double) override;
-    void process_event(const sf::Event &) override;
-    void handle_event(PlayControlEvent) override;
+    void process_event(const asgl::Event &) override;
+    void process_play_event(PlayControlEvent) override;
 
     void setup_for_control(PlayControlId);
 
-    void hide_all_reasign_but(const ksg::TextButton & this_button);
+    void hide_all_reasign_but(const TextButton & this_button);
 
     void update_for_control(PlayControlId);
     PlayControlSet make_control_set() const;
 
     static const std::array<PlayControlId, k_play_control_id_count> k_control_list;
 
-    ksg::TextArea m_info;
+    TextArea m_info;
 
-    ksg::TextArea m_pop_ani_info;
-    ksg::ImageWidget m_pop_animation;
+    TextArea m_pop_ani_info;
+    ImageWidget m_pop_animation;
 
-    std::array<ksg::SimpleFrame, ControlWidgetGroup::k_widget_count> m_column_frames;
+    std::array<asgl::SimpleFrame, ControlWidgetGroup::k_widget_count> m_column_frames;
     std::array<HeightStretcher, ControlWidgetGroup::k_widget_count*k_play_control_id_count> m_height_stretchers;
     std::array<ControlWidgetGroup, k_play_control_id_count> m_control_groups;
 
     ControlMapping m_control_mapping;
-
+#   if 0
     PlayControlEventHandler m_control_handler;
-
-    ksg::TextButton m_exit;
+#   endif
+    TextButton m_exit;
     PlayControlId m_currently_assigning = PlayControlId::count;
 
     GameSelection m_return_to_sel;

@@ -180,7 +180,7 @@ void SimpleMatcher::play_board(const BoardBase & board, StatesArray & states) {
             if (blocks(r) != k_empty_block || obstructed) {
                 obstructed = true;
                 reachables(r) = false;
-            } else if (magnitude(i - pivot.x) <= 1) {
+            } else if (cul::magnitude(i - pivot.x) <= 1) {
                 // (do nothing)
             } else if (floor_below) {
                 // must be support by a "floor" and unobstructed

@@ -21,6 +21,11 @@ In order to reach the demonstrable stage, I need to add features such that a use
 use this application without "just knowing". This will involved changes to the README and include
 instructions presented in the app.
 
+## Adapting to ASGL
+Broke a couple of things, specifically:
+- Re-assignable controls
+- "inherits" bugs from ASGL
+
 ## Goals
 - 12 Scenarios for the Puyo derivative
     * 3 non-sequential scenarios (2/3)
@@ -32,7 +37,7 @@ instructions presented in the app.
     * Two of the four games needs score board/next
     * Same game, add a timer and score board
 - About/How to play dialog
-- Re-assignable controls (done !)
+- Re-assignable controls ~~(done !)~~
     * make controls re-assignable in program
 - Have configuration accessible to free play scenarios, in scenario select.
     * each free play scenario has it's own configuration

@@ -20,10 +20,13 @@
 #include "ColumnsClone.hpp"
 
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 
 #include <cassert>
 
 namespace {
+
+using cul::magnitude;
 
 template <typename Cont>
 int wrap_index(const Cont &, int);
@@ -149,7 +152,7 @@ VectorI ColumnsPiece::bottom() const
     (void)settings;
     const Settings::Puyo conf;
     m_blocks.set_size(conf.width, conf.height);
-    m_fall_ef.setup(conf.width, conf.height, load_builtin_block_texture());
+    m_fall_ef.setup(conf.width, conf.height, BuiltinBlockGraphics::as_texture());
     m_fall_ef.set_render_blocks_merged_enabled(false);
     set_max_colors(conf.colors);
     m_falling_piece = ColumnsPiece(random_color(m_rng), random_color(m_rng), random_color(m_rng));
@@ -246,7 +249,7 @@ VectorI ColumnsPiece::bottom() const
         return m_fall_offset*k_block_size;
     } ();
     sf::Sprite brush;
-    brush.setTexture(load_builtin_block_texture());
+    brush.setTexture(BuiltinBlockGraphics::as_texture());
     for (auto [pos, id] : m_falling_piece.as_blocks()) {
         brush.setPosition(float(pos.x*k_block_size),float(pos.y*k_block_size + y_offset));
         brush.setColor(base_color_for_block(id));
@@ -270,7 +273,7 @@ VectorI ColumnsPiece::bottom() const
     m_back_to_main.set_press_event([this]() {
         set_next_state(make_top_level_dialog(GameSelection::columns_clone));
     });
-    begin_adding_widgets(get_styles())
+    begin_adding_widgets(/*get_styles()*/)
         .add(m_unimplemented).add_line_seperator()
         .add(m_back_to_main);
 }
